@@ -1,0 +1,5 @@
+{
+  "name": "JurisControl",
+  "description": "A comprehensive legal process management system designed for law offices and legal departments. It helps manage cases, documents, deadlines, and internal configurations, all within a secure, local-first interface.",
+  "requestFramePermissions": []
+}
