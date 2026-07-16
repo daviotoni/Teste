@@ -231,6 +231,17 @@
   .toast { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%) translateY(20px); background: var(--ink); color: var(--surface); padding: 12px 20px; border-radius: 999px; font-size: 14px; font-weight: 600; box-shadow: 0 8px 30px rgba(0,0,0,.25); opacity: 0; pointer-events: none; transition: opacity .25s ease, transform .25s ease; z-index: 60; max-width: 90vw; text-align: center; }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   .toast.err { background: var(--danger); color: #fff; }
+
+  /* ---------- Sync pill ---------- */
+  .sync-pill { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 700; padding: 7px 13px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink-soft); cursor: pointer; font-family: inherit; }
+  .sync-pill .sdot { width: 8px; height: 8px; border-radius: 50%; background: var(--ink-faint); flex: none; }
+  .sync-pill.ok { color: var(--pago-ink); border-color: var(--pago-ink); background: var(--pago-wash); }
+  .sync-pill.ok .sdot { background: var(--pago-ink); }
+  .sync-pill.err { color: var(--pend-ink); border-color: var(--pend-ink); background: var(--pend-wash); }
+  .sync-pill.err .sdot { background: var(--pend-ink); }
+  .sync-pill.sync .sdot { background: var(--accent); animation: sdotpulse 1s infinite; }
+  @keyframes sdotpulse { 50% { opacity: .25; } }
+  @media (prefers-reduced-motion: reduce) { .sync-pill.sync .sdot { animation: none; } }
 </style>
 
 <div class="wrap">
@@ -258,6 +269,7 @@
     <button class="btn" id="backupBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg><span>Salvar backup</span></button>
     <button class="btn" id="restoreBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 8l5-5 5 5M12 3v12"/></svg><span>Restaurar backup</span></button>
     <input type="file" id="restoreFile" accept="application/json" style="display:none" />
+    <button class="sync-pill" id="syncPill" hidden title="Estado da sincronização — clique para atualizar da nuvem"><span class="sdot"></span><span id="syncTxt"></span></button>
     <span class="saved-flash" id="savedFlash">Salvo ✓</span>
   </div>
 
@@ -336,6 +348,20 @@
 <script>
 (function () {
   "use strict";
+
+  /* =========================================================================
+     SINCRONIZAÇÃO NA NUVEM (opcional, grátis) — Supabase
+     Para ligar a nuvem, preencha as duas linhas abaixo com os dados do seu
+     projeto Supabase (Project Settings > Data API / API Keys):
+       - SUPABASE_URL      = a "Project URL"
+       - SUPABASE_ANON_KEY = a chave "anon public" / "publishable"
+     Deixe em branco ("") para usar só o modo local (salva neste navegador).
+     Mesmo com a nuvem ligada, se faltar internet o app continua funcionando
+     localmente e sincroniza de novo quando a conexão voltar.
+     ========================================================================= */
+  var SUPABASE_URL = "https://lraidfqanajxikltqymv.supabase.co";
+  var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxyYWlkZnFhbmFqeGlrbHRxeW12Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNTcwMDAsImV4cCI6MjA5OTczMzAwMH0.NM6unOTtnIKUO8YBjTnvBJVAECQ-v38PY1-GldUhCCg";
+
   var LS_KEY = "controleGaleria_v1";
   var brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
   var MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
@@ -411,13 +437,76 @@
     } catch (e) {}
     return defaultState();
   }
+  function saveLocal() { try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (e) {} }
   var saveTimer;
   function save() {
-    try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (e) {}
+    state.updatedAt = Date.now();
+    saveLocal();
     var f = document.getElementById("savedFlash");
     f.classList.add("show");
     clearTimeout(saveTimer);
     saveTimer = setTimeout(function () { f.classList.remove("show"); }, 1100);
+    pushToCloud();
+  }
+
+  // ---------- Cloud sync (Supabase REST, opcional — sem bibliotecas externas) ----------
+  var cloudReady = false, ROW_ID = "principal", pushTimer;
+  function setSync(txt, cls) {
+    var pill = document.getElementById("syncPill");
+    pill.hidden = false;
+    pill.className = "sync-pill" + (cls ? " " + cls : "");
+    document.getElementById("syncTxt").textContent = txt;
+  }
+  function cloudHeaders(extra) {
+    var h = { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY };
+    if (extra) for (var k in extra) h[k] = extra[k];
+    return h;
+  }
+  function initCloud() {
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return; // modo só local, sem pill
+    cloudReady = true;
+    pullFromCloud();
+  }
+  function pullFromCloud() {
+    if (!cloudReady) return;
+    setSync("Sincronizando…", "sync");
+    fetch(SUPABASE_URL + "/rest/v1/controle_galeria?id=eq." + ROW_ID + "&select=dados,atualizado_em", { headers: cloudHeaders() })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (rows) {
+        var row = rows && rows[0];
+        if (row && row.dados && row.dados.meses) {
+          var remoteT = new Date(row.atualizado_em).getTime() || 0;
+          var localT = state.updatedAt || 0;
+          if (remoteT >= localT) {
+            state = row.dados;
+            if (!state.meses[state.mesAtivo]) state.mesAtivo = Object.keys(state.meses).sort().reverse()[0];
+            saveLocal(); renderAll();
+            setSync("Salvo na nuvem ✓", "ok");
+          } else {
+            pushNow(); // o deste aparelho é mais novo -> sobe
+          }
+        } else {
+          pushNow(); // primeira vez: envia o que existe aqui
+        }
+      })
+      .catch(function () { setSync("Salvo neste aparelho", ""); });
+  }
+  function pushToCloud() {
+    if (!cloudReady) return;
+    clearTimeout(pushTimer);
+    pushTimer = setTimeout(pushNow, 900);
+  }
+  function pushNow() {
+    if (!cloudReady) return;
+    setSync("Salvando na nuvem…", "sync");
+    var body = JSON.stringify({ id: ROW_ID, dados: state, atualizado_em: new Date().toISOString() });
+    fetch(SUPABASE_URL + "/rest/v1/controle_galeria", {
+      method: "POST",
+      headers: cloudHeaders({ "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" }),
+      body: body
+    })
+      .then(function (r) { setSync(r.ok ? "Salvo na nuvem ✓" : "Erro ao salvar na nuvem", r.ok ? "ok" : "err"); })
+      .catch(function () { setSync("Salvo neste aparelho", ""); });
   }
   function mes() { return state.meses[state.mesAtivo]; }
 
@@ -693,10 +782,12 @@
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape" && document.getElementById("confirmOv").classList.contains("show")) closeConfirm(false);
   });
+  document.getElementById("syncPill").addEventListener("click", function () { pullFromCloud(); });
 
   // ---------- Go ----------
   state = load();
   if (!state.meses[state.mesAtivo]) state.mesAtivo = Object.keys(state.meses).sort().reverse()[0];
   renderAll();
+  initCloud();
 })();
 </script>

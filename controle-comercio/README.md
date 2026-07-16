@@ -42,8 +42,40 @@ para a internet.
 - **Saldo do mês:** previsto − despesas (é o "TOTAL" da planilha antiga).
 - **Lojas vagas:** quantas unidades estão sem inquilino.
 
+## Sincronizar na nuvem (opcional, grátis — Supabase)
+
+Por padrão os dados ficam só no navegador. Se quiser acessar os **mesmos dados em
+vários aparelhos** (celular + computador), dá para ligar uma nuvem grátis:
+
+1. Já existe uma tabela pronta (veja `supabase.sql`). Para um projeto novo, rode esse
+   SQL no **SQL Editor** do Supabase.
+2. No **topo do `index.html`**, preencha as duas linhas:
+
+   ```js
+   var SUPABASE_URL = "https://SEU-PROJETO.supabase.co";
+   var SUPABASE_ANON_KEY = "sua-chave-anon-public";
+   ```
+
+3. Pronto. No canto superior aparece um selo de status: **"Salvo na nuvem ✓"** quando
+   sincroniza, ou **"Salvo neste aparelho"** quando está sem internet. Clique no selo
+   para forçar uma atualização vinda da nuvem.
+
+Como funciona: o app guarda tudo no navegador (rápido, funciona offline) e envia uma
+cópia para a nuvem a cada mudança. Ao abrir em outro aparelho, ele baixa a versão mais
+recente. Se ficar sem internet, continua funcionando local e sincroniza quando voltar.
+
+> **Atenção — plano gratuito do Supabase:** um projeto free **pausa sozinho depois de
+> ~1 semana sem uso**. Enquanto pausado, o app continua funcionando no aparelho, mas
+> não sincroniza até alguém religar o projeto no painel do Supabase (botão *Restore*).
+> Para uso ocasional, o **backup em arquivo** (abaixo) costuma ser mais tranquilo.
+
+> **Observação — link do preview (Artifact):** dentro do preview publicado no claude.ai
+> a nuvem fica bloqueada por segurança da página, então lá ele funciona só em modo
+> local. A nuvem funciona quando o `index.html` é aberto como arquivo ou hospedado num
+> site normal.
+
 ## Dica de segurança dos dados
 
-Como os dados ficam guardados no navegador, vale usar o **Salvar backup** de vez em
-quando (uma vez por mês, por exemplo) e guardar o arquivo gerado. Se precisar trocar
-de computador ou limpar o navegador, é só usar **Restaurar backup**.
+Mesmo com a nuvem ligada, vale usar o **Salvar backup** de vez em quando (uma vez por
+mês, por exemplo) e guardar o arquivo gerado. Se precisar trocar de computador ou
+limpar o navegador, é só usar **Restaurar backup**.
