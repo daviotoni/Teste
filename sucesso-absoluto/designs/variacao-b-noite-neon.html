@@ -1,0 +1,632 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sucesso Absoluto — Variação B · Noite Carioca / Neon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;700;800&family=Instrument+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  /* ============================================================
+     ENCONTRO DE CASAIS SUCESSO ABSOLUTO
+     VARIAÇÃO B — "Noite Carioca / Neon"
+     Direção noturna: vidro fosco, brilho de letreiro, brasa.
+     Mundo escuro assumido de propósito (letreiro de neon
+     só existe no escuro) — tema único, sem versão clara.
+     ============================================================ */
+
+  :root{
+    --night:      #0B0710;
+    --night-2:    #100913;
+    --panel:      rgba(255,255,255,.045);
+    --panel-2:    rgba(255,255,255,.07);
+    --stroke:     rgba(255,255,255,.10);
+    --stroke-2:   rgba(255,255,255,.16);
+
+    --terra:  #FF6A3D;   /* terracota elétrica */
+    --pink:   #FF3D8B;   /* rosa tropical      */
+    --gold:   #FFC542;   /* dourado quente     */
+    --green:  #34E9A6;   /* verde botequim / "pode" */
+    --violet: #B889FF;
+
+    --ink:    #F5EDF8;   /* quase-branco viés violeta */
+    --mute:   #A091AD;
+    --mute-2: #766A82;
+
+    --danger: #FF3B57;
+    --ember:  #FF7A2C;
+
+    --r-lg: 30px;
+    --r-md: 20px;
+    --r-sm: 13px;
+
+    --shadow-screen: 0 60px 120px -40px rgba(0,0,0,.9), 0 0 0 1px rgba(255,255,255,.05);
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:
+      radial-gradient(120% 90% at 12% -8%, rgba(255,61,139,.20), transparent 55%),
+      radial-gradient(120% 90% at 90% 4%, rgba(255,106,61,.18), transparent 52%),
+      radial-gradient(140% 120% at 50% 118%, rgba(52,233,166,.12), transparent 50%),
+      var(--night);
+    color:var(--ink);
+    font-family:"Instrument Sans", system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+    min-height:100vh;
+    line-height:1.5;
+  }
+
+  /* grão sutil de filme sobre tudo */
+  body::after{
+    content:""; position:fixed; inset:0; pointer-events:none; z-index:9;
+    opacity:.05; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  }
+
+  /* brasas de neon à deriva no fundo */
+  .aura{ position:fixed; border-radius:50%; filter:blur(70px); opacity:.5; z-index:0; pointer-events:none; }
+  .aura.a{ width:460px; height:460px; top:-120px; left:-120px; background:var(--pink); animation:drift 22s ease-in-out infinite; }
+  .aura.b{ width:520px; height:520px; top:30%; right:-160px; background:var(--terra); animation:drift 28s ease-in-out infinite reverse; }
+  .aura.c{ width:400px; height:400px; bottom:-140px; left:20%; background:var(--green); opacity:.28; animation:drift 26s ease-in-out infinite; }
+
+  @keyframes drift{
+    0%,100%{ transform:translate(0,0) scale(1); }
+    50%{ transform:translate(40px,-30px) scale(1.12); }
+  }
+
+  .wrap{ position:relative; z-index:1; max-width:1180px; margin:0 auto; padding:64px 20px 100px; }
+
+  /* ---------- cabeçalho do showcase ---------- */
+  .lead{ text-align:center; max-width:640px; margin:0 auto 64px; }
+  .lead .kicker{
+    font-family:"Space Mono", monospace; font-size:12px; letter-spacing:.34em;
+    text-transform:uppercase; color:var(--terra); margin-bottom:22px;
+    display:inline-block; padding:7px 16px; border-radius:999px;
+    border:1px solid rgba(255,106,61,.35); background:rgba(255,106,61,.07);
+  }
+  .lead h1{
+    font-family:"Unbounded", sans-serif; font-weight:800;
+    font-size:clamp(38px,7vw,74px); line-height:.96; margin:0 0 20px;
+    letter-spacing:-.02em; text-wrap:balance;
+    color:#fff;
+    text-shadow:
+      0 0 6px rgba(255,255,255,.5),
+      0 0 26px rgba(255,61,139,.6),
+      0 0 60px rgba(255,106,61,.45);
+    animation:flicker 6s infinite;
+  }
+  .lead h1 em{ font-style:normal; color:var(--gold); text-shadow:0 0 8px rgba(255,197,66,.5),0 0 34px rgba(255,197,66,.6); }
+  .lead p{ color:var(--mute); font-size:16.5px; max-width:52ch; margin:0 auto; line-height:1.6; }
+
+  @keyframes flicker{
+    0%,19%,21%,23%,80%,100%{ opacity:1; }
+    20%,22%{ opacity:.82; }
+    82%{ opacity:.9; }
+  }
+
+  /* ---------- grelha de telas ---------- */
+  .gallery{
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 420px));
+    gap:56px 40px; justify-content:center; align-items:start;
+  }
+  .stage{ display:flex; flex-direction:column; align-items:center; gap:20px; }
+  .tag{
+    font-family:"Space Mono", monospace; font-size:12px; letter-spacing:.2em;
+    text-transform:uppercase; color:var(--mute);
+    display:flex; align-items:center; gap:10px;
+  }
+  .tag b{ color:var(--ink); font-weight:700; letter-spacing:.14em; }
+  .tag .dot{ width:7px; height:7px; border-radius:50%; background:var(--green); box-shadow:0 0 10px var(--green); }
+
+  /* ---------- moldura do celular ---------- */
+  .phone{
+    width:100%; max-width:420px; border-radius:44px; padding:11px;
+    background:linear-gradient(160deg, rgba(255,255,255,.14), rgba(255,255,255,.02) 40%, rgba(0,0,0,.4));
+    box-shadow:var(--shadow-screen);
+    border:1px solid rgba(255,255,255,.08);
+  }
+  .screen{
+    position:relative; border-radius:34px; overflow:hidden;
+    background:
+      radial-gradient(130% 80% at 15% -5%, rgba(255,61,139,.14), transparent 45%),
+      radial-gradient(120% 70% at 95% 0%, rgba(255,106,61,.12), transparent 42%),
+      linear-gradient(180deg, #130A19, #0A0610 70%);
+    min-height:720px;
+    display:flex; flex-direction:column;
+  }
+  .notch{ height:26px; display:flex; align-items:center; justify-content:center; }
+  .notch::after{ content:""; width:96px; height:6px; border-radius:99px; background:rgba(255,255,255,.14); }
+
+  .stat{ display:flex; justify-content:space-between; align-items:center; padding:2px 24px 6px;
+    font-family:"Space Mono",monospace; font-size:12px; color:var(--mute-2); letter-spacing:.05em; }
+  .stat .bars{ display:flex; gap:3px; align-items:center; }
+  .stat .bars i{ width:3px; border-radius:2px; background:var(--mute); display:inline-block; }
+
+  .body{ padding:8px 22px 26px; flex:1; overflow:hidden; }
+
+  /* ---------- tipografia interna ---------- */
+  .eyebrow{
+    font-family:"Space Mono",monospace; font-size:11px; letter-spacing:.24em;
+    text-transform:uppercase; color:var(--terra); margin-bottom:8px;
+  }
+  .title{
+    font-family:"Unbounded",sans-serif; font-weight:700; letter-spacing:-.01em;
+    font-size:26px; line-height:1.06; margin:0 0 8px; color:#fff; text-wrap:balance;
+  }
+  .sub{ color:var(--mute); font-size:14px; margin:0 0 20px; line-height:1.5; }
+
+  .glass{
+    background:var(--panel); border:1px solid var(--stroke);
+    border-radius:var(--r-md); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+  }
+
+  .pill{
+    display:inline-flex; align-items:center; gap:6px;
+    font-family:"Space Mono",monospace; font-size:10.5px; font-weight:700;
+    letter-spacing:.12em; text-transform:uppercase;
+    padding:5px 11px; border-radius:999px;
+  }
+  .pill.live{ color:var(--green); border:1px solid rgba(52,233,166,.4); background:rgba(52,233,166,.09); }
+  .pill.live::before{ content:""; width:6px; height:6px; border-radius:50%; background:var(--green); box-shadow:0 0 8px var(--green); animation:pulse 1.8s infinite; }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:.35;} }
+
+  /* ---------- avatar ---------- */
+  .av{
+    border-radius:50%; display:grid; place-items:center; flex-shrink:0;
+    font-family:"Instrument Sans",sans-serif; font-weight:700; color:#0B0710;
+    font-size:12px; line-height:1;
+  }
+  .stack{ display:flex; }
+  .stack .av{ margin-left:-8px; border:2px solid #0C0712; }
+  .stack .av:first-child{ margin-left:0; }
+
+  /* ============================================================
+     MEDIDOR DE OITO — reimaginado como tubos de neon que acendem
+     ============================================================ */
+  .meter-wrap{ }
+  .meter{
+    display:flex; gap:9px; padding:14px 16px; border-radius:999px;
+    background:rgba(0,0,0,.35); border:1px solid var(--stroke);
+    align-items:center; justify-content:space-between;
+  }
+  .pip{
+    flex:1; height:15px; border-radius:99px; position:relative;
+    background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);
+    transition:all .4s ease;
+  }
+  .pip.on{
+    background:var(--c);
+    border-color:var(--c);
+    box-shadow:0 0 10px 0 var(--c), 0 0 22px -2px var(--c), inset 0 0 6px rgba(255,255,255,.55);
+    animation:ignite 3.2s ease-in-out infinite;
+  }
+  .pip.on::after{
+    content:""; position:absolute; inset:0; border-radius:99px;
+    background:linear-gradient(180deg, rgba(255,255,255,.6), transparent 60%);
+    opacity:.5;
+  }
+  @keyframes ignite{ 0%,100%{ filter:brightness(1); } 50%{ filter:brightness(1.28); } }
+  .meter-label{ font-family:"Space Mono",monospace; font-size:12px; color:var(--mute); margin-top:11px; letter-spacing:.03em; }
+  .meter-label b{ color:var(--ink); }
+
+  /* ---------- botões ---------- */
+  .btn{
+    display:flex; align-items:center; justify-content:center; gap:8px; width:100%;
+    font-family:"Instrument Sans",sans-serif; font-weight:700; font-size:15px;
+    padding:15px; border-radius:15px; border:none; cursor:pointer;
+    color:#12060A; letter-spacing:.01em;
+    background:linear-gradient(135deg, var(--gold), var(--terra));
+    box-shadow:0 0 24px -4px rgba(255,106,61,.7), 0 10px 26px -12px rgba(255,61,139,.7);
+  }
+  .btn.ghost{
+    background:transparent; color:var(--ink); border:1px solid var(--stroke-2);
+    box-shadow:none; font-weight:600;
+  }
+  .btn.sm{ width:auto; padding:9px 16px; font-size:12.5px; border-radius:11px; }
+
+  .link{ background:none; border:none; color:var(--mute); font-family:inherit;
+    font-size:13px; font-weight:600; cursor:pointer; margin-top:14px; width:100%; text-align:center; }
+
+  /* ---------- passos ---------- */
+  .steps{ display:flex; gap:6px; margin-bottom:18px; }
+  .steps > div{ flex:1; }
+  .steps .bar{ height:4px; border-radius:2px; background:rgba(255,255,255,.12); }
+  .steps .bar.done{ background:var(--terra); box-shadow:0 0 8px -1px var(--terra); }
+  .steps .bar.now{ background:var(--gold); box-shadow:0 0 10px 0 var(--gold); }
+  .steps .lbl{ font-size:9px; text-align:center; margin-top:6px; color:var(--mute-2); font-family:"Space Mono",monospace; letter-spacing:.02em; }
+  .steps .lbl.act{ color:var(--gold); }
+
+  /* ---------- LOGIN ---------- */
+  .brand{ text-align:center; margin:26px 0 26px; }
+  .brand .mk{
+    font-family:"Unbounded",sans-serif; font-weight:800; font-size:30px; line-height:1; color:#fff;
+    letter-spacing:-.01em;
+    text-shadow:0 0 6px rgba(255,255,255,.45), 0 0 24px rgba(255,61,139,.6), 0 0 48px rgba(255,106,61,.4);
+    animation:flicker 7s infinite;
+  }
+  .brand .mk span{ color:var(--gold); text-shadow:0 0 8px rgba(255,197,66,.6),0 0 30px rgba(255,197,66,.5); }
+  .brand .sig{ color:var(--mute); font-size:13.5px; margin-top:12px; }
+  .who{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px 8px; margin:22px 0 6px; }
+  .who .cell{ display:flex; flex-direction:column; align-items:center; gap:7px; }
+  .who .cell .nm{ font-size:11px; color:var(--mute); font-weight:600; }
+  .who .cell.sel .nm{ color:var(--ink); }
+  .who .cell.sel .av{ box-shadow:0 0 0 2px #0C0712, 0 0 0 4px var(--c), 0 0 18px 0 var(--c); }
+  .who .cell.dim{ opacity:.4; }
+
+  .pinbox{ margin-top:22px; }
+  .pinrow{ display:flex; gap:14px; justify-content:center; margin:16px 0 20px; }
+  .pindot{ width:16px; height:16px; border-radius:50%; border:1.5px solid var(--stroke-2); }
+  .pindot.f{ background:var(--terra); border-color:var(--terra); box-shadow:0 0 12px 0 var(--terra); }
+
+  /* ---------- cartão de lugar ---------- */
+  .place{ display:flex; gap:13px; padding:12px; border-radius:var(--r-sm); margin-bottom:11px;
+    background:var(--panel); border:1px solid var(--stroke); align-items:center; }
+  .place .thumb{ width:56px; height:56px; border-radius:12px; flex-shrink:0; position:relative;
+    box-shadow:0 0 18px -6px var(--g1); }
+  .place .info{ flex:1; min-width:0; }
+  .place .nm{ font-weight:700; font-size:14.5px; color:var(--ink); }
+  .place .meta{ font-size:11.5px; color:var(--mute); font-family:"Space Mono",monospace; margin-top:2px; }
+  .pts{
+    font-family:"Space Mono",monospace; font-weight:700; font-size:13px; flex-shrink:0;
+    width:44px; height:44px; border-radius:12px; display:grid; place-items:center;
+    color:#0B0710;
+  }
+  .pts.p3{ background:var(--gold); box-shadow:0 0 16px -3px var(--gold); }
+  .pts.p2{ background:var(--terra); box-shadow:0 0 16px -3px var(--terra); }
+  .pts.p1{ background:var(--pink); box-shadow:0 0 16px -3px var(--pink); }
+  .pts small{ display:block; font-size:8px; font-weight:400; letter-spacing:.05em; }
+
+  .veto-ico{ width:44px; height:44px; border-radius:12px; display:grid; place-items:center;
+    border:1px dashed var(--stroke-2); color:var(--mute-2); font-size:18px; background:rgba(0,0,0,.2); }
+
+  .vetoed{ display:flex; gap:13px; padding:12px; border-radius:var(--r-sm); margin-bottom:10px;
+    background:rgba(255,59,87,.05); border:1px solid rgba(255,59,87,.22); align-items:center; }
+  .vetoed .thumb{ width:48px; height:48px; border-radius:11px; filter:grayscale(.7) brightness(.6); flex-shrink:0; }
+  .vetoed .nm{ font-weight:700; font-size:14px; color:var(--mute); text-decoration:line-through; }
+  .vetoed .meta{ font-size:11px; color:var(--danger); font-family:"Space Mono",monospace; margin-top:3px; }
+
+  .note{ font-size:11.5px; color:var(--mute-2); line-height:1.5; margin:2px 2px 18px; }
+
+  /* ============================================================
+     MURAL DA VERGONHA — luz de interrogatório + foto em brasa
+     ============================================================ */
+  .rap{ border-radius:var(--r-md); overflow:hidden; border:1px solid rgba(255,59,87,.28);
+    background:linear-gradient(180deg, rgba(255,59,87,.06), rgba(0,0,0,.2)); }
+  .polaroid{
+    position:relative; height:190px; margin:14px 14px 4px; border-radius:12px; overflow:hidden;
+    background:linear-gradient(135deg,#7A2A3D,#C56A49);
+    box-shadow:inset 0 0 60px rgba(0,0,0,.55);
+  }
+  .polaroid .flag{
+    position:absolute; top:11px; left:11px; z-index:3;
+    font-family:"Space Mono",monospace; font-size:10px; font-weight:700; letter-spacing:.16em;
+    color:#fff; background:rgba(255,59,87,.9); padding:5px 10px; border-radius:6px;
+    box-shadow:0 0 20px rgba(255,59,87,.8);
+  }
+  .polaroid .cap{ position:absolute; bottom:0; left:0; right:0; z-index:3; padding:14px;
+    background:linear-gradient(0deg, rgba(0,0,0,.85), transparent);
+    font-family:"Space Mono",monospace; font-size:11px; color:#FFD9C2; letter-spacing:.04em; }
+  /* brasa consumindo a base da foto */
+  .polaroid .ember{
+    position:absolute; left:0; right:0; bottom:0; height:70px; z-index:2; pointer-events:none;
+    background:linear-gradient(0deg, var(--ember), rgba(255,122,44,.5) 30%, transparent);
+    mix-blend-mode:screen; filter:blur(2px);
+    animation:burn 2.6s ease-in-out infinite;
+  }
+  .polaroid .ember::before{
+    content:""; position:absolute; left:0; right:0; bottom:0; height:8px;
+    background:linear-gradient(0deg,#FFE39A,#FF7A2C); filter:blur(3px); opacity:.9;
+  }
+  @keyframes burn{ 0%,100%{ opacity:.7; transform:translateY(0) scaleY(1); } 50%{ opacity:1; transform:translateY(-4px) scaleY(1.12); } }
+
+  .rap .rec{ padding:14px 16px 0; }
+  .caught-row{ display:flex; align-items:center; justify-content:space-between;
+    background:rgba(0,0,0,.3); border:1px solid var(--stroke); border-radius:13px; padding:11px 13px; margin-bottom:13px; }
+  .caught-row .who-l{ font-family:"Space Mono",monospace; font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--mute); margin-bottom:7px; }
+
+  .stamp{
+    display:inline-block; font-family:"Space Mono",monospace; font-weight:700;
+    font-size:12px; letter-spacing:.18em; color:var(--danger);
+    border:2px solid var(--danger); border-radius:8px; padding:5px 12px;
+    transform:rotate(-3deg); margin-bottom:12px;
+    box-shadow:0 0 16px -4px var(--danger); text-shadow:0 0 10px rgba(255,59,87,.6);
+  }
+  .proof{ font-size:13px; color:var(--ink); line-height:1.5; margin-bottom:4px; }
+  .proof b{ color:var(--terra); }
+  .detail{ font-size:12.5px; color:var(--mute); line-height:1.55; margin-bottom:16px; }
+
+  .trial{ border-top:1px solid var(--stroke); padding:16px; margin:0; background:rgba(0,0,0,.25); }
+  .trial .row{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .trial .k{ font-family:"Space Mono",monospace; font-size:10px; letter-spacing:.18em; text-transform:uppercase; color:var(--mute-2); }
+  .verdict{ font-family:"Unbounded",sans-serif; font-weight:800; font-size:17px; color:var(--danger);
+    text-shadow:0 0 18px rgba(255,59,87,.55); letter-spacing:.02em; }
+  .tally{ display:flex; gap:8px; }
+  .tally .t{ font-family:"Space Mono",monospace; font-size:11px; font-weight:700; padding:5px 10px; border-radius:8px; }
+  .tally .rej{ color:var(--danger); background:rgba(255,59,87,.12); border:1px solid rgba(255,59,87,.3); }
+  .tally .acc{ color:var(--mute-2); background:rgba(255,255,255,.04); border:1px solid var(--stroke); }
+  .pena{ font-size:12.5px; color:var(--gold); line-height:1.55; background:rgba(255,197,66,.07);
+    border:1px solid rgba(255,197,66,.22); border-radius:12px; padding:12px 13px; }
+  .pena b{ font-family:"Space Mono",monospace; font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--gold); display:block; margin-bottom:5px; }
+
+  /* ---------- rodapé ---------- */
+  .foot{ text-align:center; margin-top:80px; color:var(--mute-2); font-family:"Space Mono",monospace;
+    font-size:12px; letter-spacing:.06em; }
+  .foot .palette{ display:flex; gap:10px; justify-content:center; margin-top:20px; }
+  .foot .sw{ width:34px; height:34px; border-radius:9px; border:1px solid var(--stroke); }
+
+  @media (max-width:520px){
+    .wrap{ padding:44px 14px 70px; }
+    .phone{ max-width:100%; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{ animation:none !important; }
+  }
+</style>
+</head>
+<body>
+  <div class="aura a"></div>
+  <div class="aura b"></div>
+  <div class="aura c"></div>
+
+  <div class="wrap">
+
+    <header class="lead">
+      <span class="kicker">Variação B · Direção de arte</span>
+      <h1>Noite Carioca <em>Neon</em></h1>
+      <p>O Encontro de Casais depois do escurecer. Vidro fosco, letreiro de botequim e o <b style="color:var(--ink)">medidor de oito</b> reimaginado como tubos de neon que acendem — um por pessoa, na cor de cada um.</p>
+    </header>
+
+    <div class="gallery">
+
+      <!-- ============================ LOGIN ============================ -->
+      <div class="stage">
+        <div class="tag"><span class="dot"></span> <b>Login</b> · só os oito entram</div>
+        <div class="phone"><div class="screen">
+          <div class="notch"></div>
+          <div class="stat"><span>23:14</span><span class="bars"><i style="height:6px"></i><i style="height:9px"></i><i style="height:12px"></i><i style="height:8px"></i></span></div>
+          <div class="body">
+            <div class="brand">
+              <div class="eyebrow" style="text-align:center">Encontro de Casais</div>
+              <div class="mk">SUCESSO <span>ABSOLUTO</span></div>
+              <div class="sig">Só os oito entram. Quem é você?</div>
+            </div>
+
+            <div class="who">
+              <div class="cell sel" style="--c:#FF5470"><div class="av" style="width:46px;height:46px;background:#FF5470">Da</div><span class="nm">Davi</span></div>
+              <div class="cell dim" style="--c:#FF6FA3"><div class="av" style="width:46px;height:46px;background:#FF6FA3">Is</div><span class="nm">Isabel</span></div>
+              <div class="cell dim" style="--c:#FF7A3D"><div class="av" style="width:46px;height:46px;background:#FF7A3D">Lu</div><span class="nm">Luca</span></div>
+              <div class="cell dim" style="--c:#FFA24D"><div class="av" style="width:46px;height:46px;background:#FFA24D">Ma</div><span class="nm">Mayara</span></div>
+              <div class="cell dim" style="--c:#34E9A6"><div class="av" style="width:46px;height:46px;background:#34E9A6">MG</div><span class="nm">M. Gabriela</span></div>
+              <div class="cell dim" style="--c:#7CE88A"><div class="av" style="width:46px;height:46px;background:#7CE88A">Vi</div><span class="nm">Vinicius</span></div>
+              <div class="cell dim" style="--c:#FFD35C"><div class="av" style="width:46px;height:46px;background:#FFD35C">Vt</div><span class="nm">Vitor</span></div>
+              <div class="cell dim" style="--c:#FFE08A"><div class="av" style="width:46px;height:46px;background:#FFE08A">Ga</div><span class="nm">Gabrielle</span></div>
+            </div>
+
+            <div class="pinbox glass" style="padding:18px 16px; margin-top:22px;">
+              <div style="text-align:center; font-family:'Space Mono',monospace; font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--mute);">Código de Davi</div>
+              <div class="pinrow">
+                <span class="pindot f"></span><span class="pindot f"></span><span class="pindot f"></span><span class="pindot"></span>
+              </div>
+              <button class="btn">Entrar</button>
+              <button class="link">Não sou eu — voltar</button>
+            </div>
+          </div>
+        </div></div>
+      </div>
+
+      <!-- ============================ HOME ============================ -->
+      <div class="stage">
+        <div class="tag"><span class="dot"></span> <b>Home</b> · medidor de oito</div>
+        <div class="phone"><div class="screen">
+          <div class="notch"></div>
+          <div class="stat"><span>23:16</span><span class="bars"><i style="height:6px"></i><i style="height:9px"></i><i style="height:12px"></i><i style="height:8px"></i></span></div>
+          <div class="body">
+            <div class="eyebrow">Boa noite, Davi</div>
+            <h2 class="title">Bora marcar<br/>o próximo?</h2>
+            <p class="sub">Jantar de agosto está em votação de datas.</p>
+
+            <div class="glass" style="overflow:hidden; margin-bottom:18px;">
+              <div style="height:112px; position:relative; background:linear-gradient(135deg,#FF3D8B,#FF6A3D); display:flex; align-items:flex-end; padding:15px;">
+                <div style="position:absolute; top:13px; right:13px;"><span class="pill live">Votação aberta</span></div>
+                <div>
+                  <div style="font-family:'Space Mono',monospace; font-size:11px; color:rgba(255,255,255,.85); letter-spacing:.1em;">PRÓXIMO ENCONTRO</div>
+                  <div style="font-family:'Unbounded',sans-serif; font-weight:700; font-size:21px; color:#fff; text-shadow:0 2px 12px rgba(0,0,0,.4);">Jantar de agosto</div>
+                </div>
+              </div>
+              <div style="padding:16px;">
+                <div class="steps">
+                  <div><div class="bar now"></div><div class="lbl act">Datas</div></div>
+                  <div><div class="bar"></div><div class="lbl">Lugares</div></div>
+                  <div><div class="bar"></div><div class="lbl">Confirmar</div></div>
+                  <div><div class="bar"></div><div class="lbl">Reservar</div></div>
+                  <div><div class="bar"></div><div class="lbl">Encontro</div></div>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:14px;">
+                  <div>
+                    <div style="font-size:12px; color:var(--mute); font-family:'Space Mono',monospace; letter-spacing:.08em;">JÁ VOTARAM</div>
+                    <div style="font-family:'Unbounded',sans-serif; font-weight:700; font-size:30px; color:#fff;">6 <span style="font-size:15px; color:var(--mute); font-family:'Instrument Sans';">de 8</span></div>
+                  </div>
+                  <span class="pill" style="color:var(--gold); border:1px solid rgba(255,197,66,.35); background:rgba(255,197,66,.08);">faltam 2</span>
+                </div>
+
+                <!-- MEDIDOR DE OITO — neon -->
+                <div class="meter">
+                  <span class="pip on" style="--c:#FF5470"></span>
+                  <span class="pip on" style="--c:#FF6FA3"></span>
+                  <span class="pip on" style="--c:#FF7A3D"></span>
+                  <span class="pip on" style="--c:#FFA24D"></span>
+                  <span class="pip on" style="--c:#34E9A6"></span>
+                  <span class="pip on" style="--c:#7CE88A"></span>
+                  <span class="pip"></span>
+                  <span class="pip"></span>
+                </div>
+                <div class="meter-label">Faltam <b>Vitor</b> e <b>Gabrielle</b> acenderem o medidor.</div>
+              </div>
+            </div>
+
+            <button class="btn">Ver votação de datas</button>
+          </div>
+        </div></div>
+      </div>
+
+      <!-- ==================== VOTAÇÃO DE LUGARES ==================== -->
+      <div class="stage">
+        <div class="tag"><span class="dot"></span> <b>Votação de lugares</b> · veto secreto</div>
+        <div class="phone"><div class="screen">
+          <div class="notch"></div>
+          <div class="stat"><span>23:19</span><span class="bars"><i style="height:6px"></i><i style="height:9px"></i><i style="height:12px"></i><i style="height:8px"></i></span></div>
+          <div class="body">
+            <div class="eyebrow">Jantar de agosto</div>
+            <h2 class="title">Onde vamos?</h2>
+            <p class="sub">Até 3 escolhas (3, 2 e 1 ponto) e 1 veto secreto por pessoa.</p>
+
+            <div class="glass" style="padding:13px 15px; margin-bottom:16px; display:flex; align-items:center; gap:13px;">
+              <div style="font-family:'Unbounded',sans-serif; font-weight:700; font-size:16px; color:#fff; white-space:nowrap;">6 de 8</div>
+              <div class="meter" style="flex:1; padding:9px 11px; gap:6px;">
+                <span class="pip on" style="--c:#FF5470; height:11px"></span>
+                <span class="pip on" style="--c:#FF6FA3; height:11px"></span>
+                <span class="pip on" style="--c:#FF7A3D; height:11px"></span>
+                <span class="pip on" style="--c:#FFA24D; height:11px"></span>
+                <span class="pip on" style="--c:#34E9A6; height:11px"></span>
+                <span class="pip on" style="--c:#7CE88A; height:11px"></span>
+                <span class="pip" style="height:11px"></span>
+                <span class="pip" style="height:11px"></span>
+              </div>
+            </div>
+
+            <div class="place">
+              <div class="thumb" style="--g1:#FF3D8B; background:linear-gradient(135deg,#FF3D8B,#FF6A3D);"></div>
+              <div class="info">
+                <div class="nm">Aconchego Carioca</div>
+                <div class="meta">Praça da Bandeira · $$$ · ★ 4.7</div>
+              </div>
+              <div class="pts p3">3<small>PONTOS</small></div>
+            </div>
+
+            <div class="place">
+              <div class="thumb" style="--g1:#FF6A3D; background:linear-gradient(135deg,#7A2A3D,#34E9A6);"></div>
+              <div class="info">
+                <div class="nm">Espírito Santa</div>
+                <div class="meta">Santa Teresa · $$$ · ★ 4.7</div>
+              </div>
+              <div class="pts p2">2<small>PONTOS</small></div>
+            </div>
+
+            <div class="place">
+              <div class="thumb" style="--g1:#FFC542; background:linear-gradient(135deg,#FF6A3D,#FFC542);"></div>
+              <div class="info">
+                <div class="nm">Bar do Momo</div>
+                <div class="meta">Tijuca · $$ · ★ 4.4</div>
+              </div>
+              <div class="pts p1">1<small>PONTO</small></div>
+            </div>
+
+            <div class="place" style="background:transparent; border-style:dashed;">
+              <div class="thumb" style="--g1:#7CE88A; background:linear-gradient(135deg,#34E9A6,#7CE88A); opacity:.5;"></div>
+              <div class="info">
+                <div class="nm" style="color:var(--mute)">Rooftop Yalla</div>
+                <div class="meta">Leblon · $$$$ · ★ 4.5</div>
+              </div>
+              <div class="veto-ico" title="Vetar em sigilo">⊘</div>
+            </div>
+
+            <div style="font-family:'Space Mono',monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--danger); margin:20px 2px 10px;">Fora da disputa</div>
+            <div class="vetoed">
+              <div class="thumb" style="background:linear-gradient(135deg,#5C1A2B,#7A2A3D);"></div>
+              <div class="info">
+                <div class="nm">Sushi Leblon</div>
+                <div class="meta">Vetado em sigilo — ninguém sabe por quem.</div>
+              </div>
+            </div>
+            <p class="note">Um veto de qualquer pessoa tira o lugar da disputa. Ninguém precisa se explicar.</p>
+
+            <button class="btn">Confirmar meu voto (3)</button>
+          </div>
+        </div></div>
+      </div>
+
+      <!-- ==================== MURAL DA VERGONHA ==================== -->
+      <div class="stage">
+        <div class="tag"><span class="dot" style="background:var(--danger); box-shadow:0 0 10px var(--danger)"></span> <b>Mural da Vergonha</b> · o lado B</div>
+        <div class="phone"><div class="screen">
+          <div class="notch"></div>
+          <div class="stat"><span>23:24</span><span class="bars"><i style="height:6px"></i><i style="height:9px"></i><i style="height:12px"></i><i style="height:8px"></i></span></div>
+          <div class="body">
+            <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
+              <div>
+                <div class="eyebrow" style="color:var(--danger)">Lado B do histórico</div>
+                <h2 class="title" style="color:var(--danger); text-shadow:0 0 22px rgba(255,59,87,.5);">Mural da<br/>Vergonha</h2>
+              </div>
+              <button class="btn ghost sm" style="margin-top:6px;">📸 Denunciar</button>
+            </div>
+            <p class="sub" style="margin-top:6px;">Quando alguém sai escondido, o flagrante vira processo.</p>
+
+            <div class="rap">
+              <div class="polaroid">
+                <span class="flag">FLAGRANTE</span>
+                <div class="ember"></div>
+                <div class="cap">Mamma Jamma · 14 mar · 21h48</div>
+              </div>
+
+              <div class="rec">
+                <div class="caught-row">
+                  <div>
+                    <div class="who-l">Pegos no ato</div>
+                    <div class="stack">
+                      <div class="av" style="width:30px;height:30px;background:#FFD35C" title="Vitor">Vt</div>
+                      <div class="av" style="width:30px;height:30px;background:#FFE08A" title="Gabrielle">Ga</div>
+                      <div class="av" style="width:30px;height:30px;background:#FF7A3D" title="Luca">Lu</div>
+                      <div class="av" style="width:30px;height:30px;background:#FFA24D" title="Mayara">Ma</div>
+                    </div>
+                  </div>
+                  <span class="pill" style="color:var(--danger); border:1px solid rgba(255,59,87,.35); background:rgba(255,59,87,.1);">4 réus</span>
+                </div>
+
+                <div class="stamp">CONLUIO A QUATRO</div>
+                <p class="proof">Prova: <b>A própria selfie</b> — sorrindo, sem remorso.</p>
+                <p class="detail">Quatro pratos, azeite na mesa e cardápio aberto. A perícia identificou o local pela garrafa de olio d'oliva. Premeditação evidente. Alegação da defesa: "Foi de última hora, juro."</p>
+              </div>
+
+              <div class="trial">
+                <div class="row">
+                  <span class="k">Veredito do júri</span>
+                  <span class="verdict">CONDENADOS</span>
+                </div>
+                <div class="row">
+                  <span class="k">Votos</span>
+                  <div class="tally">
+                    <span class="t rej">REJEITA 4</span>
+                    <span class="t acc">ACEITA 0</span>
+                  </div>
+                </div>
+                <div class="pena">
+                  <b>Pena imposta</b>
+                  Sobremesa de todos no próximo encontro — e repetir a Mamma Jamma a oito.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div></div>
+      </div>
+
+    </div>
+
+    <footer class="foot">
+      Encontro de Casais Sucesso Absoluto · Variação B — Noite Carioca / Neon
+      <div class="palette">
+        <span class="sw" style="background:#0B0710" title="Noite"></span>
+        <span class="sw" style="background:#FF6A3D" title="Terracota elétrica"></span>
+        <span class="sw" style="background:#FF3D8B" title="Rosa tropical"></span>
+        <span class="sw" style="background:#FFC542" title="Dourado quente"></span>
+        <span class="sw" style="background:#34E9A6" title="Verde botequim"></span>
+      </div>
+    </footer>
+
+  </div>
+</body>
+</html>
