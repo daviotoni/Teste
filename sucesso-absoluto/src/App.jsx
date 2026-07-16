@@ -12,27 +12,40 @@ import {
    Assinatura: "medidor de oito" — fileira de 8 que se preenche
    ============================================================ */
 
+/* ------------------------------------------------------------
+   EDITORIAL RIVIERA — direção de arte aplicada
+   Revista de viagem de luxo → app. Fraunces + Archivo,
+   papel marfim, ouro-foil, marinho-petróleo, vermelho-escândalo.
+   As chaves antigas foram remapeadas para os tons editoriais
+   (mesmos nomes → toda a UI herda a nova cara).
+   ------------------------------------------------------------ */
 const C = {
-  sand: "#FBF7F0",
-  sandDeep: "#F2EADD",
-  cream: "#FFFDFA",
-  wine: "#5C1A2B",
-  wineDeep: "#3E1019",
-  wineSoft: "#7A2A3D",
-  terra: "#C56A49",
-  terraSoft: "#E5A183",
-  olive: "#4A5A3A",
-  gold: "#C9A24B",
-  ink: "#2A211E",
-  mute: "#8A7D74",
-  line: "#E7DECF",
+  sand: "#EFE9DC",      // papel
+  sandDeep: "#E3DAC7",  // superfície / mesa da revista
+  cream: "#F6F2E9",     // papel elevado (cards)
+  wine: "#123B3A",      // marinho-petróleo — cor de marca (títulos, botões, nav)
+  wineDeep: "#0C2523",  // marinho profundo
+  wineSoft: "#2C5F5B",  // marinho claro
+  terra: "#A9834A",     // ouro antigo — acentos, olho, stepper
+  terraSoft: "#CBA867", // ouro claro
+  olive: "#2C5F5B",     // estados positivos (podem / confirmado) → marinho claro
+  gold: "#A9834A",      // ouro (estrelas, foil)
+  ink: "#211B14",       // tinta espresso — texto
+  mute: "#8C8474",      // tinta desbotada — legendas
+  line: "#D9CFBB",      // fio de régua
+  // acentos exclusivos do "Mural da Vergonha"
+  scandal: "#C0301C",
+  scandalDeep: "#7E1C10",
+  goldDeep: "#7E5F31",
+  marine: "#123B3A",
+  foil: "linear-gradient(115deg,#7E5F31 0%,#CBA867 34%,#F0DFAE 50%,#B5904F 68%,#8A6B39 100%)",
 };
 
-/* sombras quentes (viés vinho) — dão profundidade sem “sujar” a cor */
+/* sombras editoriais — profundas, viés tinta/papel */
 const SH = {
-  card: "0 2px 4px rgba(62,16,25,.03), 0 14px 34px -20px rgba(62,16,25,.26)",
-  cardHover: "0 6px 10px rgba(62,16,25,.05), 0 26px 50px -24px rgba(62,16,25,.40)",
-  screen: "0 40px 90px -50px rgba(62,16,25,.55), 0 0 0 1px rgba(62,16,25,.05)",
+  card: "0 2px 4px rgba(33,27,20,.03), 0 18px 40px -24px rgba(33,27,20,.28)",
+  cardHover: "0 8px 14px rgba(33,27,20,.05), 0 30px 60px -26px rgba(33,27,20,.42)",
+  screen: "38px 60px 90px -58px rgba(33,27,20,.5), 0 0 0 1px rgba(33,27,20,.06)",
   btn: "0 10px 22px -12px",
 };
 
@@ -161,7 +174,7 @@ function Avatar({ id, size = 32, ring = false }) {
       width: size, height: size, borderRadius: "50%", background: p.color,
       color: "#fff", display: "grid", placeItems: "center",
       fontSize: size * 0.36, fontWeight: 600, flexShrink: 0,
-      fontFamily: "Inter, sans-serif",
+      fontFamily: "Archivo, sans-serif",
       boxShadow: ring ? `0 0 0 2px ${C.sand}, 0 0 0 4px ${p.color}` : "none",
     }}>
       {initials(p.name)}
@@ -183,27 +196,28 @@ function AvatarStack({ ids, size = 28, max = 8 }) {
 }
 
 /* medidor de oito — a assinatura do app */
-function EightMeter({ filled, size = 12, gap = 6, color = C.wine, label }) {
+/* medidor de oito — reinterpretado como traços de contagem em ouro (viés editorial) */
+function EightMeter({ filled, size = 12, gap = 6, color = C.gold, label }) {
+  const H = Math.round(size * 1.9);
   return (
     <div>
       <div style={{
-        display: "inline-flex", gap, padding: "5px 7px", borderRadius: 999,
-        background: "rgba(62,16,25,.035)", border: `1px solid ${C.line}`,
+        display: "inline-flex", alignItems: "flex-end", gap: Math.max(4, gap - 1),
+        padding: "0 2px 6px", borderBottom: `1px solid ${C.line}`,
       }}>
         {Array.from({ length: 8 }).map((_, i) => {
           const on = i < filled;
           return (
             <div key={i} style={{
-              width: size, height: size, borderRadius: "50%",
+              width: 2.5, height: on ? H : Math.round(H * 0.62), borderRadius: 2,
               background: on ? color : "transparent",
-              border: `1.5px solid ${on ? color : C.line}`,
-              boxShadow: on ? "inset 0 1px 1.5px rgba(255,255,255,.4), 0 1px 3px rgba(62,16,25,.25)" : "none",
-              transition: "background .3s ease, box-shadow .3s ease",
+              border: on ? "none" : `1.5px solid ${C.line}`,
+              transition: "height .3s ease, background .3s ease",
             }} />
           );
         })}
       </div>
-      {label && <div style={{ fontSize: 12, color: C.mute, marginTop: 6 }}>{label}</div>}
+      {label && <div style={{ fontSize: 12, color: C.mute, marginTop: 6, fontFamily: "Archivo, sans-serif" }}>{label}</div>}
     </div>
   );
 }
@@ -213,7 +227,7 @@ function Pill({ children, bg = C.sandDeep, fg = C.ink }) {
     <span style={{
       background: bg, color: fg, fontSize: 11, fontWeight: 600,
       padding: "3px 9px", borderRadius: 999, whiteSpace: "nowrap",
-      fontFamily: "Inter, sans-serif",
+      fontFamily: "Archivo, sans-serif",
     }}>{children}</span>
   );
 }
@@ -230,7 +244,7 @@ function Card({ children, style, className = "" }) {
 function Btn({ children, onClick, variant = "solid", full, small, disabled }) {
   const base = {
     border: "none", borderRadius: 14, cursor: disabled ? "not-allowed" : "pointer",
-    fontWeight: 600, fontFamily: "Inter, sans-serif",
+    fontWeight: 600, fontFamily: "Archivo, sans-serif",
     padding: small ? "8px 14px" : "13px 18px", fontSize: small ? 13 : 15,
     width: full ? "100%" : "auto", display: "inline-flex", alignItems: "center",
     justifyContent: "center", gap: 8,
@@ -274,13 +288,15 @@ function SectionTitle({ eyebrow, title, action }) {
 
 function Header({ title, sub }) {
   return (
-    <div style={{ padding: "24px 20px 10px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-        <span style={{ width: 20, height: 2, background: C.terra, borderRadius: 2, display: "block" }} />
-        <span style={{ fontSize: 10, letterSpacing: 1.6, textTransform: "uppercase", color: C.terra, fontWeight: 700 }}>Encontro de Casais Sucesso Absoluto</span>
+    <div style={{ padding: "26px 20px 14px" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginBottom: 14, color: C.goldDeep }}>
+        <span style={{ height: 1, flex: 1, maxWidth: 40, background: C.line }} />
+        <span style={{ fontSize: 9.5, letterSpacing: "0.3em", textTransform: "uppercase", fontWeight: 600, fontFamily: "Archivo, sans-serif", textAlign: "center" }}>Encontro de Casais · Sucesso Absoluto</span>
+        <span style={{ height: 1, flex: 1, maxWidth: 40, background: C.line }} />
       </div>
-      <h1 style={{ fontFamily: "Fraunces, serif", fontSize: 31, color: C.wine, margin: 0, fontWeight: 600, letterSpacing: -0.6, lineHeight: 1.06 }}>{title}</h1>
-      {sub && <p style={{ color: C.mute, margin: "7px 0 0", fontSize: 14, lineHeight: 1.45 }}>{sub}</p>}
+      <h1 style={{ fontFamily: "Fraunces, serif", fontSize: 40, color: C.ink, margin: 0, fontWeight: 560, letterSpacing: -0.8, lineHeight: 0.98, textWrap: "balance" }}>{title}</h1>
+      {sub && <p style={{ color: C.mute, margin: "12px 0 0", fontSize: 14, lineHeight: 1.6, maxWidth: 380 }}>{sub}</p>}
+      <div style={{ height: 2, width: 120, marginTop: 16, borderRadius: 2, background: C.foil }} />
     </div>
   );
 }
@@ -303,7 +319,7 @@ function HomeScreen({ go }) {
 
       <div style={{ padding: "8px 20px 20px" }}>
         <Card style={{ marginBottom: 18 }}>
-          <div style={{ height: 130, background: "linear-gradient(135deg,#5C1A2B,#C56A49)", position: "relative", display: "flex", alignItems: "flex-end", padding: 16 }}>
+          <div style={{ height: 130, background: "linear-gradient(140deg,#1C4A47,#0C2523 72%)", position: "relative", display: "flex", alignItems: "flex-end", padding: 16 }}>
             <div style={{ position: "absolute", top: 14, right: 14 }}>
               <Pill bg="rgba(255,255,255,.9)" fg={C.wine}>Votação aberta</Pill>
             </div>
@@ -417,7 +433,7 @@ function CalendarScreen() {
           background: active ? col : "#fff", color: active ? "#fff" : C.mute,
           borderRadius: 12, padding: "9px 4px", cursor: "pointer",
           display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
-          fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: 12,
+          fontFamily: "Archivo, sans-serif", fontWeight: 600, fontSize: 12,
         }}>
         {icon} {label}
       </button>
@@ -501,7 +517,7 @@ function ExploreScreen({ go }) {
       <Header title="Explorar o Rio" sub="Ache o programa. Sugira pro grupo." />
 
       <div style={{ padding: "8px 20px 20px" }}>
-        <Card style={{ marginBottom: 18, padding: 16, background: "linear-gradient(135deg,#5C1A2B,#7A2A3D)", color: "#fff" }}>
+        <Card style={{ marginBottom: 18, padding: 16, background: "linear-gradient(140deg,#123B3A,#0C2523)", color: "#fff" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
               <div style={{ fontFamily: "Fraunces, serif", fontSize: 18, fontWeight: 600 }}>Surpreenda o grupo</div>
@@ -1046,16 +1062,21 @@ function MemoriesScreen() {
 
           {INFRACTIONS.map((inf) => {
             const condemned = inf.verdict === "condenados";
-            const stampColor = condemned ? C.wine : C.olive;
+            /* o Mural vira um spread de escândalo tabloide: tinta-preta + vermelho */
+            const acc = condemned ? C.scandal : C.terraSoft;
+            const darkInk = "#17120C";
+            const lightInk = "#EFE7D6";
+            const lightMute = "#A79D89";
+            const panel = "rgba(239,231,214,.06)";
             const excluded = PEOPLE.filter((p) => !inf.caught.includes(p.id));
             return (
-              <Card key={inf.id} style={{ marginBottom: 16, border: `1.5px solid ${stampColor}`, position: "relative" }}>
+              <Card key={inf.id} style={{ marginBottom: 16, border: `1px solid ${condemned ? C.scandalDeep : C.line}`, position: "relative", background: darkInk, color: lightInk }}>
                 {/* carimbo teatral */}
                 <div style={{
                   position: "absolute", top: 14, right: 12, transform: "rotate(-8deg)",
-                  border: `2.5px solid ${stampColor}`, color: stampColor, borderRadius: 8,
+                  border: `2.5px solid ${acc}`, color: acc, borderRadius: 8,
                   padding: "3px 10px", fontWeight: 800, fontSize: 13, letterSpacing: 2,
-                  textTransform: "uppercase", background: "rgba(255,255,255,.85)", zIndex: 2,
+                  textTransform: "uppercase", background: "rgba(23,18,12,.6)", zIndex: 2,
                 }}>
                   {condemned ? "Condenados" : "Absolvidos"}
                 </div>
@@ -1065,7 +1086,7 @@ function MemoriesScreen() {
                     <BurningPhoto src={inf.photo} alt={"Prova: " + inf.place} />
                     <div style={{
                       position: "absolute", bottom: 12, left: 12, zIndex: 6,
-                      background: "rgba(42,33,30,.72)", color: "#fff", borderRadius: 8,
+                      background: "rgba(23,18,12,.82)", color: lightInk, borderRadius: 8,
                       padding: "4px 10px", fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase",
                       display: "flex", alignItems: "center", gap: 6,
                     }}>
@@ -1074,35 +1095,42 @@ function MemoriesScreen() {
                   </div>
                 )}
                 <div style={{ padding: 16 }}>
-                  <Pill bg={condemned ? "#F7E8EC" : "#EAF0E4"} fg={stampColor}>{inf.severity}</Pill>
-                  <div style={{ fontFamily: "Fraunces, serif", fontSize: 19, color: C.wine, fontWeight: 600, margin: "10px 0 2px" }}>
-                    Pegos no {inf.place}
+                  <span style={{
+                    display: "inline-block", background: condemned ? C.scandal : C.terraSoft, color: condemned ? "#fff" : darkInk,
+                    fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase",
+                    padding: "3px 10px", borderRadius: 4,
+                  }}>{inf.severity}</span>
+                  <div style={{ fontFamily: "Fraunces, serif", fontSize: 22, color: lightInk, fontWeight: 560, margin: "12px 0 2px", letterSpacing: -0.3 }}>
+                    Pegos no <em style={{ fontStyle: "italic", color: acc }}>{inf.place}</em>
                   </div>
-                  <div style={{ fontSize: 12, color: C.mute, marginBottom: 12 }}>{inf.date} · Prova: {inf.proof}</div>
+                  <div style={{ fontSize: 12, color: lightMute, marginBottom: 12 }}>{inf.date} · Prova: {inf.proof}</div>
 
                   {/* medidor: quem saiu vs quem foi traído */}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, background: C.sand, borderRadius: 12, padding: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, background: panel, borderRadius: 12, padding: 12 }}>
                     <AvatarStack ids={inf.caught} size={26} />
-                    <EightMeter filled={inf.caught.length} color={stampColor}
+                    <EightMeter filled={inf.caught.length} color={acc}
                       label={`${inf.caught.length} saíram · ${8 - inf.caught.length} traídos`} />
                   </div>
 
-                  <div style={{ borderLeft: `3px solid ${C.line}`, paddingLeft: 12, marginBottom: 10 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: C.mute, textTransform: "uppercase", letterSpacing: 1 }}>Alegação da defesa</div>
-                    <p style={{ fontSize: 14, color: C.ink, margin: "3px 0 0", fontStyle: "italic" }}>"{inf.excuse}"</p>
+                  <div style={{ borderLeft: `3px solid ${acc}`, paddingLeft: 12, marginBottom: 12 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: lightMute, textTransform: "uppercase", letterSpacing: 1 }}>Alegação da defesa</div>
+                    <p style={{ fontSize: 15, color: lightInk, margin: "3px 0 0", fontStyle: "italic", fontFamily: "Fraunces, serif" }}>"{inf.excuse}"</p>
                   </div>
 
-                  <p style={{ fontSize: 13, color: C.ink, margin: "0 0 12px", lineHeight: 1.4 }}>{inf.detail}</p>
+                  <p style={{ fontSize: 13, color: lightMute, margin: "0 0 14px", lineHeight: 1.5 }}>{inf.detail}</p>
 
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: C.mute, marginBottom: inf.pena ? 10 : 0 }}>
-                    <Scale size={15} color={stampColor} />
-                    <span>Julgamento dos traídos: <b style={{ color: C.ink }}>{inf.votes.rejeita} × {inf.votes.aceita}</b> {condemned ? "pela condenação" : "pela absolvição"}</span>
+                  {/* veredito editorial */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderTop: `1px solid rgba(239,231,214,.14)`, borderBottom: `1px solid rgba(239,231,214,.14)`, marginBottom: inf.pena ? 12 : 0 }}>
+                    <Scale size={16} color={acc} />
+                    <span style={{ fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", color: lightMute, fontWeight: 700 }}>Veredito dos traídos</span>
+                    <span style={{ marginLeft: "auto", fontFamily: "Fraunces, serif", fontSize: 22, color: acc, fontWeight: 600 }}>{inf.votes.rejeita} × {inf.votes.aceita}</span>
                   </div>
-                  <div style={{ fontSize: 11, color: C.mute, marginBottom: inf.pena ? 10 : 0 }}>Quem estava na foto não vota.</div>
+                  <div style={{ fontSize: 11, color: lightMute, marginBottom: inf.pena ? 12 : 0 }}>Quem estava na foto não vota.</div>
 
                   {inf.pena && (
-                    <div style={{ background: "#F7E8EC", borderRadius: 12, padding: "10px 12px", fontSize: 13, color: C.wine, fontWeight: 600 }}>
-                      Pena: {inf.pena}
+                    <div style={{ background: "rgba(192,48,28,.14)", border: `1px solid ${C.scandalDeep}`, borderRadius: 10, padding: "10px 12px", fontSize: 13, color: lightInk }}>
+                      <span style={{ color: acc, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, fontSize: 11 }}>Pena imposta</span>
+                      <div style={{ marginTop: 3 }}>{inf.pena}</div>
                     </div>
                   )}
                 </div>
@@ -1205,7 +1233,7 @@ function CreateScreen({ go }) {
 
   const inputStyle = {
     width: "100%", border: `1.5px solid ${C.line}`, borderRadius: 14,
-    padding: "13px 14px", fontSize: 15, fontFamily: "Inter, sans-serif",
+    padding: "13px 14px", fontSize: 15, fontFamily: "Archivo, sans-serif",
     background: "#fff", color: C.ink, outline: "none",
   };
 
@@ -1335,7 +1363,7 @@ function LoginScreen({ onLogin }) {
             style={{
               width: "100%", border: `1.5px solid ${err ? C.wineSoft : C.line}`, borderRadius: 14,
               padding: "14px", fontSize: 22, textAlign: "center", letterSpacing: 12,
-              fontFamily: "Inter, sans-serif", outline: "none", marginBottom: 10, background: "#fff", color: C.ink,
+              fontFamily: "Archivo, sans-serif", outline: "none", marginBottom: 10, background: "#fff", color: C.ink,
             }}
           />
           {err && <div style={{ fontSize: 13, color: C.wineSoft, fontWeight: 600, marginBottom: 10 }}>Esse não é o código de {person(sel).name}. Tenta de novo.</div>}
@@ -1384,9 +1412,9 @@ export default function App() {
   const showBack = tab === "confirmed" || tab === "profiles" || tab === "create";
 
   return (
-    <div className="sa-page" style={{ minHeight: "100vh", fontFamily: "Inter, system-ui, sans-serif", color: C.ink }}>
+    <div className="sa-page" style={{ minHeight: "100vh", fontFamily: "Archivo, system-ui, sans-serif", color: C.ink }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,600&family=Inter:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Archivo:wght@400;500;600;700&display=swap');
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { margin: 0; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
         ::-webkit-scrollbar { display: none; }
