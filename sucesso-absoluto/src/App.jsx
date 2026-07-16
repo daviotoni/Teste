@@ -3,7 +3,7 @@ import {
   Home, CalendarDays, Compass, Vote, Sparkles, MapPin, Star,
   Check, X, HelpCircle, Clock, Users, ChevronRight, Share2,
   CalendarPlus, Trophy, Plus, Heart, Utensils, ArrowLeft,
-  Ban, Megaphone, Camera, Scale, LogOut, Lock,
+  Ban, Megaphone, Camera, Scale, LogOut, Lock, Search, SlidersHorizontal,
 } from "lucide-react";
 
 /* ============================================================
@@ -105,6 +105,20 @@ const EVENTS = [
 
 const ALL_PLACES = [...PLACES, ...OUTINGS, ...EVENTS];
 const priceLabel = (p) => (p === 0 ? "Grátis" : "$".repeat(p));
+
+/* ---------- zonas do Rio (região de cada bairro) ---------- */
+const ZONE_OF = {
+  "Leblon": "Zona Sul", "Botafogo": "Zona Sul", "Flamengo": "Zona Sul", "Gávea": "Zona Sul",
+  "Jardim Botânico": "Zona Sul", "Urca": "Zona Sul", "Lagoa": "Zona Sul", "Catete": "Zona Sul",
+  "Glória": "Zona Sul", "São Conrado": "Zona Sul",
+  "Praça da Bandeira": "Zona Norte", "Tijuca": "Zona Norte",
+  "Santa Teresa": "Centro", "Centro": "Centro", "Praça Mauá": "Centro", "Gamboa": "Centro",
+  "Barra": "Zona Oeste",
+};
+const REGIONS = ["Todas", "Zona Sul", "Zona Norte", "Centro", "Zona Oeste"];
+const zoneOf = (hood) => ZONE_OF[hood] || (REGIONS.includes(hood) ? hood : "Outras");
+/* normaliza p/ busca (minúsculas, sem acento) */
+const norm = (s) => (s || "").toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
 /* votação de datas — votos individuais (8 pessoas) */
 const DATE_OPTIONS = [
@@ -500,62 +514,128 @@ function CalendarScreen() {
 }
 
 /* EXPLORAR */
-function ExploreScreen({ go }) {
+function ExploreScreen({ go, onSuggest, suggested, onAddCustom, livePlaces }) {
   const cats = ["Todos", "Restaurante", "Bar", "Rooftop", "Show", "Teatro", "Ao ar livre", "Passeio", "Exposição"];
   const [cat, setCat] = useState("Todos");
-  const hoods = ["Barra", "Zona Sul", "Centro", "Niterói", "Santa Teresa"];
+  const [region, setRegion] = useState("Todas");
+  const [query, setQuery] = useState("");
+  const [newRegion, setNewRegion] = useState("Zona Sul");
+  const [addOpen, setAddOpen] = useState(false);
 
+  const q = norm(query.trim());
   const list = useMemo(() => {
-    if (cat === "Todos") return ALL_PLACES;
-    return ALL_PLACES.filter((p) => p.cat === cat);
-  }, [cat]);
+    return livePlaces.filter((p) => {
+      if (cat !== "Todos" && p.cat !== cat) return false;
+      if (region !== "Todas" && zoneOf(p.hood) !== region) return false;
+      if (q) {
+        const hay = norm([p.name, p.hood, zoneOf(p.hood), p.cat, p.desc, ...(p.tags || [])].join(" "));
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [cat, region, q, livePlaces]);
 
-  const surprise = [PLACES[3], OUTINGS[2], EVENTS[1]];
+  const clearFilters = () => { setCat("Todos"); setRegion("Todas"); setQuery(""); };
+  const activeFilters = (cat !== "Todos" ? 1 : 0) + (region !== "Todas" ? 1 : 0) + (q ? 1 : 0);
+
+  const createCustom = () => {
+    const nm = query.trim();
+    if (!nm) return;
+    onAddCustom({ name: nm, region: newRegion });
+    setAddOpen(false);
+    setQuery("");
+    go("placevote");
+  };
+
+  const chip = (label, active, onClick, key) => (
+    <span key={key || label} onClick={onClick} style={{
+      background: active ? C.wine : "#fff", color: active ? "#fff" : C.ink,
+      border: `1px solid ${active ? C.wine : C.line}`, borderRadius: 999,
+      padding: "7px 15px", fontSize: 13, whiteSpace: "nowrap", cursor: "pointer", fontWeight: 500,
+    }}>{label}</span>
+  );
 
   return (
     <div>
-      <Header title="Explorar o Rio" sub="Ache o programa. Sugira pro grupo." />
+      <Header title="Explorar o Rio" sub="Busque por nome, bairro ou região. Sugira pro grupo." />
 
       <div style={{ padding: "8px 20px 20px" }}>
-        <Card style={{ marginBottom: 18, padding: 16, background: "linear-gradient(140deg,#123B3A,#0C2523)", color: "#fff" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-              <div style={{ fontFamily: "Fraunces, serif", fontSize: 18, fontWeight: 600 }}>Surpreenda o grupo</div>
-              <div style={{ fontSize: 13, opacity: .85 }}>3 ideias que combinam com vocês</div>
-            </div>
-            <Sparkles size={26} color={C.gold} />
-          </div>
-          <div style={{ display: "flex", gap: 10, marginTop: 14, overflowX: "auto" }}>
-            {surprise.map((p) => (
-              <div key={p.id} style={{ minWidth: 130, background: "rgba(255,255,255,.12)", borderRadius: 14, padding: 10 }}>
-                <div style={{ height: 56, borderRadius: 10, background: p.img, marginBottom: 8 }} />
-                <div style={{ fontSize: 13, fontWeight: 600 }}>{p.name}</div>
-                <div style={{ fontSize: 11, opacity: .8 }}>{p.hood} · {priceLabel(p.price)}</div>
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        <div style={{ display: "flex", gap: 8, marginBottom: 12, overflowX: "auto", paddingBottom: 4 }}>
-          {cats.map((c) => (
-            <span key={c} onClick={() => setCat(c)} style={{
-              background: cat === c ? C.wine : "#fff", color: cat === c ? "#fff" : C.ink,
-              border: `1px solid ${cat === c ? C.wine : C.line}`, borderRadius: 999,
-              padding: "7px 15px", fontSize: 13, whiteSpace: "nowrap", cursor: "pointer", fontWeight: 500,
-            }}>{c}</span>
-          ))}
-        </div>
-        <div style={{ display: "flex", gap: 8, marginBottom: 18, overflowX: "auto", paddingBottom: 4 }}>
-          {hoods.map((h) => (
-            <span key={h} style={{ background: C.sandDeep, borderRadius: 999, padding: "5px 12px", fontSize: 12, color: C.mute, whiteSpace: "nowrap" }}>{h}</span>
-          ))}
+        {/* busca */}
+        <div style={{
+          display: "flex", alignItems: "center", gap: 10, background: "#fff",
+          border: `1.5px solid ${C.line}`, borderRadius: 14, padding: "12px 14px", marginBottom: 12,
+        }}>
+          <Search size={18} color={C.mute} />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Restaurante, bar, bairro… ex.: Leblon, pizza, rooftop"
+            style={{
+              flex: 1, border: "none", outline: "none", background: "transparent",
+              fontSize: 15, color: C.ink, fontFamily: "Archivo, sans-serif", minWidth: 0,
+            }}
+          />
+          {query && (
+            <button onClick={() => setQuery("")} aria-label="Limpar" style={{ border: "none", background: "none", cursor: "pointer", color: C.mute, display: "grid", placeItems: "center", padding: 0 }}>
+              <X size={17} />
+            </button>
+          )}
         </div>
 
-        {list.map((p) => (
+        {/* região */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 10, overflowX: "auto", paddingBottom: 4 }}>
+          {REGIONS.map((r) => chip(r, region === r, () => setRegion(r), "r-" + r))}
+        </div>
+        {/* categoria */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 14, overflowX: "auto", paddingBottom: 4 }}>
+          {cats.map((c) => chip(c, cat === c, () => setCat(c), "c-" + c))}
+        </div>
+
+        {/* contador + limpar */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <div style={{ fontSize: 12.5, color: C.mute, display: "flex", alignItems: "center", gap: 6 }}>
+            <SlidersHorizontal size={14} />
+            {list.length} {list.length === 1 ? "lugar" : "lugares"}
+            {activeFilters > 0 && <span> · {activeFilters} {activeFilters === 1 ? "filtro" : "filtros"}</span>}
+          </div>
+          {activeFilters > 0 && (
+            <button onClick={clearFilters} style={{ border: "none", background: "none", color: C.terra, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Limpar</button>
+          )}
+        </div>
+
+        {/* estado vazio + criar lugar novo */}
+        {list.length === 0 && (
+          <Card style={{ padding: 20, marginBottom: 14, textAlign: "center" }}>
+            <div style={{ fontFamily: "Fraunces, serif", fontSize: 18, color: C.wine, fontWeight: 600, marginBottom: 4 }}>Nada por aqui ainda</div>
+            <p style={{ fontSize: 13.5, color: C.mute, margin: "0 0 14px", lineHeight: 1.5 }}>
+              {query ? <>O Rio é grande — talvez "<b style={{ color: C.ink }}>{query}</b>" não esteja na lista. Adicione você mesmo.</> : "Nenhum lugar bate com esses filtros."}
+            </p>
+            {query ? (
+              !addOpen ? (
+                <Btn small variant="terra" onClick={() => setAddOpen(true)}><Plus size={15} /> Adicionar "{query.trim()}"</Btn>
+              ) : (
+                <div style={{ textAlign: "left", background: C.sand, border: `1px solid ${C.line}`, borderRadius: 12, padding: 14 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: C.mute, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Em que região fica?</div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+                    {REGIONS.filter((r) => r !== "Todas").map((r) => chip(r, newRegion === r, () => setNewRegion(r), "nr-" + r))}
+                  </div>
+                  <Btn small full variant="solid" onClick={createCustom}><Plus size={15} /> Criar e sugerir "{query.trim()}"</Btn>
+                </div>
+              )
+            ) : (
+              <Btn small variant="ghost" onClick={clearFilters}>Limpar filtros</Btn>
+            )}
+          </Card>
+        )}
+
+        {list.map((p) => {
+          const isSug = suggested.includes(p.id);
+          return (
           <Card key={p.id} style={{ marginBottom: 14 }}>
             <div style={{ height: 120, background: p.img, position: "relative" }}>
               <div style={{ position: "absolute", top: 12, left: 12 }}><Pill bg="rgba(255,255,255,.92)" fg={C.wine}>{p.cat}</Pill></div>
               <div style={{ position: "absolute", top: 12, right: 12 }}><Pill bg="rgba(42,33,30,.6)" fg="#fff">{priceLabel(p.price)}</Pill></div>
+              {p.custom && <div style={{ position: "absolute", bottom: 12, left: 12 }}><Pill bg={C.gold} fg="#fff">Adicionado por você</Pill></div>}
             </div>
             <div style={{ padding: 16 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -565,28 +645,38 @@ function ExploreScreen({ go }) {
                 </div>
               </div>
               <div style={{ fontSize: 13, color: C.mute, margin: "2px 0 8px", display: "flex", alignItems: "center", gap: 6 }}>
-                <MapPin size={13} /> {p.hood} · {p.dist}
+                <MapPin size={13} /> {p.hood}{zoneOf(p.hood) !== p.hood ? ` · ${zoneOf(p.hood)}` : ""}{p.dist ? ` · ${p.dist}` : ""}
               </div>
               <p style={{ fontSize: 13.5, color: C.ink, margin: "0 0 12px", lineHeight: 1.4 }}>{p.desc}</p>
               <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
                 {p.tags.map((t) => <Pill key={t}>{t}</Pill>)}
               </div>
               <div style={{ display: "flex", gap: 8 }}>
-                <Btn small variant="terra" onClick={() => go("placevote")}><Plus size={15} /> Sugerir pro grupo</Btn>
-                <Btn small variant="ghost"><MapPin size={15} /> Mapa</Btn>
+                <Btn small variant={isSug ? "olive" : "terra"} onClick={() => { if (!isSug) onSuggest(p); }} disabled={isSug}>
+                  {isSug ? <><Check size={15} /> No ranking</> : <><Plus size={15} /> Sugerir pro grupo</>}
+                </Btn>
+                {isSug && <Btn small variant="ghost" onClick={() => go("placevote")}><Vote size={15} /> Ver votação</Btn>}
               </div>
             </div>
           </Card>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
 }
 
 /* VOTAÇÃO DE LUGARES — com veto secreto e cutucada */
-function PlaceVoteScreen() {
+function PlaceVoteScreen({ suggested = [], livePlaces = ALL_PLACES, myBallot = null, onConfirmVote }) {
+  const [myPicks, setMyPicks] = useState([]);
+  const [myVeto, setMyVeto] = useState(null);
+  const [nudgeOpen, setNudgeOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  /* opções = catálogo base da votação + o que o grupo sugeriu */
+  const options = [...new Set([...PLACE_OPTIONS, ...suggested])];
   const scores = {};
-  PLACE_OPTIONS.forEach((id) => (scores[id] = { pts: 0, voters: [] }));
+  options.forEach((id) => (scores[id] = { pts: 0, voters: [] }));
   Object.entries(PLACE_BALLOTS).forEach(([voter, ballot]) => {
     ballot.forEach((placeId, idx) => {
       if (scores[placeId]) {
@@ -595,19 +685,24 @@ function PlaceVoteScreen() {
       }
     });
   });
-  const ranked = PLACE_OPTIONS.map((id) => ({ place: ALL_PLACES.find((p) => p.id === id), ...scores[id] }))
+  /* meu voto já confirmado entra na conta */
+  if (myBallot) {
+    myBallot.picks.forEach((placeId, idx) => {
+      if (scores[placeId]) { scores[placeId].pts += 3 - idx; scores[placeId].voters.push(ME); }
+    });
+  }
+  const ranked = options
+    .map((id) => ({ place: livePlaces.find((p) => p.id === id), isNew: !PLACE_OPTIONS.includes(id), ...scores[id] }))
+    .filter((r) => r.place)
     .sort((a, b) => b.pts - a.pts);
 
-  const voted = Object.keys(PLACE_BALLOTS);
+  const votedBase = Object.keys(PLACE_BALLOTS);
+  const voted = myBallot && !votedBase.includes(ME) ? [...votedBase, ME] : votedBase;
   const notVoted = PEOPLE.filter((p) => !voted.includes(p.id)).map((p) => p.id);
   const meAlreadyVoted = voted.includes(ME);
 
-  const [myPicks, setMyPicks] = useState([]);
-  const [myVeto, setMyVeto] = useState(null);
-  const [nudgeOpen, setNudgeOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
-
-  const vetoedIds = myVeto ? [...VETOED_BY_OTHERS, myVeto] : VETOED_BY_OTHERS;
+  const effVeto = myBallot ? myBallot.veto : myVeto;
+  const vetoedIds = effVeto ? [...VETOED_BY_OTHERS, effVeto] : VETOED_BY_OTHERS;
   const active = ranked.filter((r) => !vetoedIds.includes(r.place.id));
   const vetoedList = ranked.filter((r) => vetoedIds.includes(r.place.id));
   const leader = active[0];
@@ -685,7 +780,10 @@ function PlaceVoteScreen() {
                     <span style={{ fontWeight: 700, color: C.ink, fontSize: 15 }}>{r.place.name}</span>
                     <span style={{ fontFamily: "Fraunces, serif", fontSize: 18, color: C.wine, fontWeight: 700 }}>{r.pts} <span style={{ fontSize: 11, color: C.mute }}>pts</span></span>
                   </div>
-                  <div style={{ fontSize: 12, color: C.mute, marginBottom: 6 }}>{r.place.hood} · {priceLabel(r.place.price)}</div>
+                  <div style={{ fontSize: 12, color: C.mute, marginBottom: 6, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                    <span>{r.place.hood}{zoneOf(r.place.hood) !== r.place.hood ? ` · ${zoneOf(r.place.hood)}` : ""} · {priceLabel(r.place.price)}</span>
+                    {r.isNew && <span style={{ color: C.terra, fontWeight: 700 }}>· Novo, sugerido por você</span>}
+                  </div>
                   <div style={{ height: 6, background: C.sandDeep, borderRadius: 3, overflow: "hidden" }}>
                     <div style={{ width: `${pct}%`, height: "100%", background: i === 0 ? C.terra : C.wineSoft, borderRadius: 3, transition: "width .4s" }} />
                   </div>
@@ -741,9 +839,14 @@ function PlaceVoteScreen() {
 
         {!meAlreadyVoted && (
           <div style={{ position: "sticky", bottom: 78, marginTop: 8 }}>
-            <Btn full disabled={myPicks.length === 0}>
+            <Btn full disabled={myPicks.length === 0} onClick={() => onConfirmVote && onConfirmVote({ picks: myPicks, veto: myVeto })}>
               <Vote size={18} /> {myPicks.length === 0 ? "Escolha ao menos 1 lugar" : `Confirmar meu voto (${myPicks.length})`}
             </Btn>
+          </div>
+        )}
+        {myBallot && (
+          <div style={{ marginTop: 8, background: "#EAF0E4", borderRadius: 12, padding: "12px 14px", fontSize: 13.5, color: C.olive, fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}>
+            <Check size={16} /> Seu voto entrou — os pontos já contam no ranking.
           </div>
         )}
       </div>
@@ -1395,14 +1498,51 @@ const TABS = [
 export default function App() {
   const [tab, setTab] = useState("home");
   const [user, setUser] = useState(null);
+
+  /* estado compartilhado — dá coerência ao fluxo buscar → sugerir → votar */
+  const [suggested, setSuggested] = useState([]);   // ids de lugares sugeridos ao grupo
+  const [customPlaces, setCustomPlaces] = useState([]); // lugares criados por você
+  const [myBallot, setMyBallot] = useState(null);   // { picks:[ids], veto } do meu voto
+  const [toast, setToast] = useState(null);
+  const nextId = React.useRef(1000);
+
+  const livePlaces = useMemo(() => [...ALL_PLACES, ...customPlaces], [customPlaces]);
+
+  const showToast = (msg) => { setToast(msg); };
+  React.useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 2600);
+    return () => clearTimeout(t);
+  }, [toast]);
+
   const go = (t) => { setTab(t); window.scrollTo(0, 0); };
-  const logout = () => { setUser(null); setTab("home"); };
+  const logout = () => { setUser(null); setTab("home"); setSuggested([]); setCustomPlaces([]); setMyBallot(null); };
+
+  const suggestPlace = (p) => {
+    setSuggested((s) => (s.includes(p.id) ? s : [...s, p.id]));
+    showToast(`"${p.name}" entrou no ranking da votação.`);
+  };
+  const addCustom = ({ name, region }) => {
+    const id = ++nextId.current;
+    const place = {
+      id, name, cat: "Sugestão", hood: region, price: 2, rating: 4.5,
+      img: "linear-gradient(140deg,#123B3A,#A9834A)", desc: "Adicionado por você para o grupo votar.",
+      tags: ["Novo", region], dist: "", custom: true,
+    };
+    setCustomPlaces((s) => [...s, place]);
+    setSuggested((s) => [...s, id]);
+    showToast(`"${name}" criado e sugerido ao grupo.`);
+  };
+  const confirmVote = ({ picks, veto }) => {
+    setMyBallot({ picks, veto });
+    showToast("Voto registrado — obrigado!");
+  };
 
   const screens = {
     home: <HomeScreen go={go} />,
     calendar: <CalendarScreen />,
-    explore: <ExploreScreen go={go} />,
-    placevote: <PlaceVoteScreen />,
+    explore: <ExploreScreen go={go} onSuggest={suggestPlace} suggested={suggested} onAddCustom={addCustom} livePlaces={livePlaces} />,
+    placevote: <PlaceVoteScreen suggested={suggested} livePlaces={livePlaces} myBallot={myBallot} onConfirmVote={confirmVote} />,
     confirmed: <ConfirmedScreen />,
     memories: <MemoriesScreen />,
     profiles: <ProfilesScreen />,
@@ -1470,6 +1610,19 @@ export default function App() {
             <Btn full variant="ghost" onClick={() => go("confirmed")}><Check size={16} /> Ver exemplo confirmado</Btn>
             <Btn full variant="ghost" onClick={() => go("profiles")}><Users size={16} /> O grupo</Btn>
             <Btn variant="ghost" onClick={logout}><LogOut size={16} /></Btn>
+          </div>
+        )}
+
+        {toast && (
+          <div role="status" style={{
+            position: "fixed", bottom: 92, left: "50%", transform: "translateX(-50%)",
+            zIndex: 40, maxWidth: 400, width: "calc(100% - 40px)",
+            background: C.wineDeep, color: "#F6F2E9", borderRadius: 12,
+            padding: "12px 16px", fontSize: 13.5, fontWeight: 500,
+            boxShadow: "0 18px 40px -18px rgba(12,37,35,.7)",
+            display: "flex", alignItems: "center", gap: 10,
+          }}>
+            <Check size={16} color={C.terraSoft} /> <span>{toast}</span>
           </div>
         )}
 
