@@ -468,7 +468,7 @@ function HomeScreen({ go, encontros = [], dateVotes = {}, customDates = [] }) {
                   <div style={{ width: 40, height: 40, borderRadius: 10, background: C.foil, flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 700, color: C.wine, fontFamily: "Fraunces, serif", fontSize: 16 }}>{e.name}</div>
-                    <div style={{ fontSize: 12, color: C.mute }}>{[e.type, e.price, e.period].filter(Boolean).join(" · ")}</div>
+                    <div style={{ fontSize: 12, color: C.mute }}>{[e.type, e.price, e.dateCount ? `${e.dateCount} ${e.dateCount === 1 ? "data" : "datas"}` : null, e.placeCount ? `${e.placeCount} ${e.placeCount === 1 ? "lugar" : "lugares"}` : null].filter(Boolean).join(" · ")}</div>
                   </div>
                   <Pill bg="#EAF0E4" fg={C.olive}>Votação aberta</Pill>
                 </div>
@@ -1572,36 +1572,34 @@ function ProfilesScreen() {
 }
 
 /* CRIAR ENCONTRO */
-function CreateScreen({ go, onCreate }) {
+function CreateScreen({ go, onCreate, livePlaces = ALL_PLACES }) {
   const [name, setName] = useState("");
   const [desc, setDesc] = useState("");
-  const [period, setPeriod] = useState("Agosto");
-  const [type, setType] = useState(null);
-  const [price, setPrice] = useState(null);
-  const [regions, setRegions] = useState([]);
+  const [type, setType] = useState("Jantar");
+  const [price, setPrice] = useState("Tanto faz");
   const [deadline, setDeadline] = useState("3 dias");
+  const [dates, setDates] = useState([]);   // [{iso, time, slot}]
+  const [places, setPlaces] = useState([]); // [{id?, name, region?, custom?}]
+  const [dform, setDform] = useState({ iso: "", time: "", slot: "Jantar" });
+  const [pQuery, setPQuery] = useState("");
+  const [pRegion, setPRegion] = useState("Zona Sul");
   const [done, setDone] = useState(false);
 
   const TYPES = ["Jantar", "Almoço", "Bar", "Passeio", "Show / teatro", "Surpresa"];
   const PRICES = ["Até R$ 60", "R$ 60–120", "R$ 120–200", "Tanto faz"];
-  const REGIONS = ["Barra", "Recreio", "Zona Sul", "Centro", "Niterói", "Baixada", "Serra", "Região dos Lagos"];
   const DEADLINES = ["2 dias", "3 dias", "5 dias", "1 semana"];
+  const PLACE_REGIONS = REGIONS.filter((r) => r !== "Todas");
 
-  const toggleRegion = (r) =>
-    setRegions((s) => (s.includes(r) ? s.filter((x) => x !== r) : [...s, r]));
-
-  const ready = name.trim().length > 0 && type && price;
+  const ready = name.trim().length > 0 && dates.length > 0;
 
   const Chip = ({ label, active, onClick }) => (
     <button type="button" onClick={onClick} aria-pressed={active} style={{
       background: active ? C.wine : "#fff", color: active ? "#fff" : C.ink,
       border: `1.5px solid ${active ? C.wine : C.line}`, borderRadius: 999,
       padding: "8px 15px", fontSize: 13, cursor: "pointer", fontWeight: 600,
-      whiteSpace: "nowrap", transition: "all .15s", userSelect: "none",
-      fontFamily: "Archivo, sans-serif",
+      whiteSpace: "nowrap", userSelect: "none", fontFamily: "Archivo, sans-serif",
     }}>{label}</button>
   );
-
   const Field = ({ label, children, hint }) => (
     <div style={{ marginBottom: 22 }}>
       <div style={{ fontSize: 13, fontWeight: 700, color: C.wine, marginBottom: 8 }}>
@@ -1610,31 +1608,51 @@ function CreateScreen({ go, onCreate }) {
       {children}
     </div>
   );
+  const inputStyle = { width: "100%", border: `1.5px solid ${C.line}`, borderRadius: 14, padding: "13px 14px", fontSize: 15, fontFamily: "Archivo, sans-serif", background: "#fff", color: C.ink, outline: "none" };
+  const fieldStyle = { ...inputStyle, borderRadius: 12, padding: "11px 12px", marginTop: 4 };
 
-  const inputStyle = {
-    width: "100%", border: `1.5px solid ${C.line}`, borderRadius: 14,
-    padding: "13px 14px", fontSize: 15, fontFamily: "Archivo, sans-serif",
-    background: "#fff", color: C.ink, outline: "none",
+  const addDate = () => {
+    if (!dform.iso) return;
+    if (dates.some((d) => d.iso === dform.iso && d.time === dform.time)) return;
+    setDates((s) => [...s, { ...dform }]);
+    setDform({ iso: "", time: "", slot: dform.slot });
+  };
+  const removeDate = (i) => setDates((s) => s.filter((_, idx) => idx !== i));
+
+  const pq = norm(pQuery.trim());
+  const matches = pq ? livePlaces.filter((p) => norm(p.name + " " + p.hood).includes(pq)).slice(0, 5) : [];
+  const hasPlace = (name) => places.some((p) => norm(p.name) === norm(name));
+  const addCatalogPlace = (p) => { if (!hasPlace(p.name)) setPlaces((s) => [...s, { id: p.id, name: p.name }]); setPQuery(""); };
+  const addCustomPlace = () => {
+    const nm = pQuery.trim(); if (!nm || hasPlace(nm)) { setPQuery(""); return; }
+    setPlaces((s) => [...s, { name: nm, region: pRegion, custom: true }]); setPQuery("");
+  };
+  const removePlace = (i) => setPlaces((s) => s.filter((_, idx) => idx !== i));
+
+  const submit = () => {
+    onCreate && onCreate({ name: name.trim(), desc: desc.trim(), type, price, deadline, dates, places });
+    setDone(true);
   };
 
   if (done) {
     return (
       <div>
-        <Header title="Temos um encontro nascendo!" sub="A votação de datas já está aberta pros oito." />
+        <Header title="Encontro criado!" sub="Suas datas e lugares já entraram na votação dos oito." />
         <div style={{ padding: "8px 20px 20px" }}>
           <Card style={{ padding: 24, textAlign: "center", marginBottom: 18 }}>
             <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#EAF0E4", display: "grid", placeItems: "center", margin: "0 auto 14px" }}>
               <Check size={32} color={C.olive} />
             </div>
             <div style={{ fontFamily: "Fraunces, serif", fontSize: 22, color: C.wine, fontWeight: 600, marginBottom: 6 }}>{name}</div>
-            <div style={{ fontSize: 14, color: C.mute, marginBottom: 4 }}>{type} · {price} · prazo de {deadline}</div>
-            {regions.length > 0 && <div style={{ fontSize: 13, color: C.mute }}>{regions.join(" · ")}</div>}
-            <div style={{ margin: "18px 0 4px", display: "flex", flexDirection: "column", alignItems: "center" }}>
-              <EightMeter filled={1} label="1 de 8 votaram — você conta como o primeiro" />
+            <div style={{ fontSize: 14, color: C.mute, marginBottom: 12 }}>{type} · {price} · prazo de {deadline}</div>
+            <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+              <Pill bg={C.sandDeep}>{dates.length} {dates.length === 1 ? "data" : "datas"}</Pill>
+              {places.length > 0 && <Pill bg={C.sandDeep}>{places.length} {places.length === 1 ? "lugar" : "lugares"}</Pill>}
             </div>
           </Card>
-          <Btn full onClick={() => go("calendar")}><Vote size={18} /> Ir para a votação de datas</Btn>
+          <Btn full onClick={() => go("calendar")}><CalendarDays size={18} /> Votar nas datas</Btn>
           <div style={{ height: 10 }} />
+          {places.length > 0 && <><Btn full variant="ghost" onClick={() => go("placevote")}><Vote size={16} /> Votar nos lugares</Btn><div style={{ height: 10 }} /></>}
           <Btn full variant="ghost" onClick={() => go("home")}>Voltar ao início</Btn>
         </div>
       </div>
@@ -1643,20 +1661,79 @@ function CreateScreen({ go, onCreate }) {
 
   return (
     <div>
-      <Header title="Criar encontro" sub="Três respostas e o resto o grupo decide votando." />
+      <Header title="Criar encontro" sub="Proponha as datas, os horários e os lugares. O grupo vota no resto." />
       <div style={{ padding: "8px 20px 20px" }}>
         <Field label="Nome do encontro">
-          <input style={inputStyle} placeholder="Ex.: Jantar de agosto" value={name} onChange={(e) => setName(e.target.value)} />
+          <input style={inputStyle} placeholder="Ex.: Jantar de agosto" value={name} onChange={(e) => setName(e.target.value)} aria-label="Nome do encontro" />
         </Field>
 
         <Field label="Descrição" hint="opcional">
-          <input style={inputStyle} placeholder="Alguma ideia ou ocasião especial?" value={desc} onChange={(e) => setDesc(e.target.value)} />
+          <input style={inputStyle} placeholder="Ocasião, tema, algo especial?" value={desc} onChange={(e) => setDesc(e.target.value)} aria-label="Descrição" />
         </Field>
 
-        <Field label="Que tipo de programa?">
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {TYPES.map((t) => <Chip key={t} label={t} active={type === t} onClick={() => setType(t)} />)}
+        {/* DATAS PROPOSTAS — viram as opções de votação */}
+        <Field label="Datas e horários propostos" hint="pelo menos 1">
+          {dates.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
+              {dates.map((d, i) => {
+                const f = fmtISODate(d.iso);
+                return (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, background: C.sand, border: `1px solid ${C.line}`, borderRadius: 12, padding: "10px 12px" }}>
+                    <CalendarDays size={16} color={C.terra} />
+                    <span style={{ flex: 1, fontSize: 14, color: C.ink, fontWeight: 600 }}>{f.weekday}, {f.date}{d.time ? ` · ${fmtTime(d.time)}` : ""} <span style={{ color: C.mute, fontWeight: 400 }}>· {d.slot}</span></span>
+                    <button type="button" onClick={() => removeDate(i)} aria-label="Remover data" style={{ border: "none", background: "none", cursor: "pointer", color: C.mute, display: "grid", placeItems: "center" }}><X size={16} /></button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+            <input type="date" value={dform.iso} onChange={(e) => setDform((s) => ({ ...s, iso: e.target.value }))} style={{ ...fieldStyle, marginTop: 0, flex: 1.2 }} aria-label="Data proposta" />
+            <input type="time" value={dform.time} onChange={(e) => setDform((s) => ({ ...s, time: e.target.value }))} style={{ ...fieldStyle, marginTop: 0, flex: 1 }} aria-label="Horário" />
           </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <select value={dform.slot} onChange={(e) => setDform((s) => ({ ...s, slot: e.target.value }))} style={{ ...fieldStyle, marginTop: 0, flex: 1 }} aria-label="Momento">
+              {["Manhã", "Almoço", "Tarde", "Jantar", "Noite"].map((sl) => <option key={sl}>{sl}</option>)}
+            </select>
+            <Btn small variant="ghost" disabled={!dform.iso} onClick={addDate}><Plus size={15} /> Adicionar</Btn>
+          </div>
+        </Field>
+
+        {/* LUGARES PROPOSTOS — viram as opções da votação de lugares */}
+        <Field label="Lugares propostos" hint="opcional — o grupo vota">
+          {places.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+              {places.map((p, i) => (
+                <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: C.wine, color: "#fff", borderRadius: 999, padding: "6px 8px 6px 12px", fontSize: 13, fontWeight: 600 }}>
+                  {p.name}{p.custom ? ` · ${p.region}` : ""}
+                  <button type="button" onClick={() => removePlace(i)} aria-label={`Remover ${p.name}`} style={{ border: "none", background: "rgba(255,255,255,.2)", color: "#fff", borderRadius: "50%", width: 18, height: 18, display: "grid", placeItems: "center", cursor: "pointer" }}><X size={12} /></button>
+                </span>
+              ))}
+            </div>
+          )}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, ...inputStyle, padding: "11px 12px" }}>
+            <Search size={17} color={C.mute} />
+            <input value={pQuery} onChange={(e) => setPQuery(e.target.value)} placeholder="Buscar restaurante ou digitar um novo" aria-label="Buscar ou adicionar lugar"
+              style={{ flex: 1, border: "none", outline: "none", background: "transparent", fontSize: 15, color: C.ink, fontFamily: "Archivo, sans-serif", minWidth: 0 }} />
+          </div>
+          {pq && (
+            <div style={{ border: `1px solid ${C.line}`, borderRadius: 12, marginTop: 8, overflow: "hidden" }}>
+              {matches.map((p) => (
+                <button type="button" key={p.id} onClick={() => addCatalogPlace(p)} disabled={hasPlace(p.name)}
+                  style={{ width: "100%", textAlign: "left", border: "none", borderBottom: `1px solid ${C.line}`, background: "#fff", padding: "10px 12px", cursor: hasPlace(p.name) ? "default" : "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", fontFamily: "Archivo, sans-serif", opacity: hasPlace(p.name) ? 0.5 : 1 }}>
+                  <span style={{ fontSize: 14, color: C.ink }}>{p.name} <span style={{ color: C.mute }}>· {p.hood}</span></span>
+                  {hasPlace(p.name) ? <Check size={15} color={C.olive} /> : <Plus size={15} color={C.terra} />}
+                </button>
+              ))}
+              <div style={{ padding: 10, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <span style={{ fontSize: 12.5, color: C.mute }}>Novo:</span>
+                <select value={pRegion} onChange={(e) => setPRegion(e.target.value)} aria-label="Região do novo lugar" style={{ ...fieldStyle, marginTop: 0, width: "auto", padding: "7px 10px", fontSize: 13 }}>
+                  {PLACE_REGIONS.map((r) => <option key={r}>{r}</option>)}
+                </select>
+                <Btn small variant="terra" onClick={addCustomPlace}><Plus size={14} /> Adicionar "{pQuery.trim()}"</Btn>
+              </div>
+            </div>
+          )}
         </Field>
 
         <Field label="Faixa de preço por pessoa">
@@ -1664,27 +1741,20 @@ function CreateScreen({ go, onCreate }) {
             {PRICES.map((p) => <Chip key={p} label={p} active={price === p} onClick={() => setPrice(p)} />)}
           </div>
         </Field>
-
-        <Field label="Regiões" hint="pode marcar várias">
+        <Field label="Que tipo de programa?">
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {REGIONS.map((r) => <Chip key={r} label={r} active={regions.includes(r)} onClick={() => toggleRegion(r)} />)}
+            {TYPES.map((t) => <Chip key={t} label={t} active={type === t} onClick={() => setType(t)} />)}
           </div>
         </Field>
-
-        <Field label="Período desejado">
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {["Agosto", "Setembro", "Próximo feriado"].map((p) => <Chip key={p} label={p} active={period === p} onClick={() => setPeriod(p)} />)}
-          </div>
-        </Field>
-
         <Field label="Prazo para votar">
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {DEADLINES.map((d) => <Chip key={d} label={d} active={deadline === d} onClick={() => setDeadline(d)} />)}
           </div>
         </Field>
 
-        <Btn full disabled={!ready} onClick={() => { onCreate && onCreate({ name: name.trim(), desc: desc.trim(), type, price, regions, period, deadline }); setDone(true); }}>
-          <Sparkles size={18} /> {ready ? "Abrir votação de datas" : "Preencha nome, tipo e preço"}
+        {!ready && <div style={{ fontSize: 12.5, color: C.mute, marginBottom: 10 }}>Falta {name.trim() ? "" : "o nome"}{!name.trim() && dates.length === 0 ? " e " : ""}{dates.length === 0 ? "pelo menos uma data" : ""}.</div>}
+        <Btn full disabled={!ready} onClick={submit}>
+          <Sparkles size={18} /> Criar encontro e abrir votação
         </Btn>
       </div>
     </div>
@@ -1696,6 +1766,13 @@ const ACCESS_CODES = { // demo: no app real a autenticação é via Supabase (ma
   davi: "1101", isabel: "1102", luca: "2201", mayara: "2202",
   gabi: "3301", vini: "3302", vitor: "4401", gab: "4402",
 };
+/* saudações personalizadas (piadas internas do grupo) */
+const GREETINGS = {
+  vitor: "vsf vitor",
+  vini: "tnc viniburro",
+  luca: "vai a merda luca",
+};
+const greetingFor = (id) => GREETINGS[id] || `Oi, ${person(id).name}!`;
 
 function LoginScreen({ onLogin }) {
   const [sel, setSel] = useState(null);
@@ -1737,7 +1814,7 @@ function LoginScreen({ onLogin }) {
       ) : (
         <Card style={{ padding: 22, textAlign: "center" }}>
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 10 }}><Avatar id={sel} size={56} /></div>
-          <label htmlFor="pin-input" style={{ fontFamily: "Fraunces, serif", fontSize: 20, color: C.wine, fontWeight: 600, marginBottom: 14, display: "block" }}>Oi, {person(sel).name}!</label>
+          <label htmlFor="pin-input" style={{ fontFamily: "Fraunces, serif", fontSize: 20, color: C.wine, fontWeight: 600, marginBottom: 14, display: "block" }}>{greetingFor(sel)}</label>
           <input
             id="pin-input" type="password" inputMode="numeric" maxLength={4} placeholder="••••"
             aria-label={`Código de 4 dígitos de ${person(sel).name}`} aria-invalid={err}
@@ -1846,10 +1923,31 @@ export default function App() {
     setDateVotes((s) => ({ ...s, [id]: "prefer" }));
     showToast(`Data "${d.date}" sugerida ao grupo.`);
   };
-  const createEncontro = (data) => {
-    const id = "e" + (++nextId.current);
-    setEncontros((s) => [{ id, ...data, createdBy: user, votes: 1 }, ...s]);
-    showToast("Encontro criado — votação de datas aberta.");
+  const createEncontro = ({ name, desc, type, price, deadline, dates = [], places = [] }) => {
+    const eid = "e" + (++nextId.current);
+    // 1) datas propostas viram opções de votação (e já registro meu voto "prefiro")
+    const newDates = dates.map((d) => {
+      const f = fmtISODate(d.iso);
+      return { id: "cd" + (++nextId.current), date: f.date, weekday: f.weekday, slot: d.slot, time: fmtTime(d.time), prefer: [], can: [], maybe: [], no: [], custom: true, encontro: eid };
+    });
+    if (newDates.length) {
+      setCustomDates((s) => [...s, ...newDates]);
+      setDateVotes((s) => { const n = { ...s }; newDates.forEach((d) => { n[d.id] = "prefer"; }); return n; });
+    }
+    // 2) lugares propostos viram opções da votação de lugares
+    const newCustom = [];
+    const ids = [];
+    places.forEach((p) => {
+      if (p.id) { ids.push(p.id); return; }
+      const pid = ++nextId.current;
+      newCustom.push({ id: pid, name: p.name, cat: "Sugestão", hood: p.region, price: 2, rating: 4.5, img: "linear-gradient(140deg,#123B3A,#A9834A)", desc: "Proposto neste encontro.", tags: ["Novo", p.region], dist: "", custom: true });
+      ids.push(pid);
+    });
+    if (newCustom.length) setCustomPlaces((s) => [...s, ...newCustom]);
+    if (ids.length) setSuggested((s) => [...new Set([...s, ...ids])]);
+    // 3) registro do encontro
+    setEncontros((s) => [{ id: eid, name, desc, type, price, deadline, dateCount: newDates.length, placeCount: ids.length, createdBy: user }, ...s]);
+    showToast("Encontro criado — datas e lugares entraram na votação.");
   };
   const setGoing = (v) => setPresence(v);
   const addInfraction = ({ place, culprits, detail }) => {
@@ -1867,7 +1965,7 @@ export default function App() {
     confirmed: <ConfirmedScreen presence={presence} onSetGoing={setGoing} showToast={showToast} />,
     memories: <MemoriesScreen infractions={infractions} onDenounce={addInfraction} onRemoveInfraction={removeInfraction} />,
     profiles: <ProfilesScreen />,
-    create: <CreateScreen go={go} onCreate={createEncontro} />,
+    create: <CreateScreen go={go} onCreate={createEncontro} livePlaces={livePlaces} />,
   };
 
   const showBack = tab === "confirmed" || tab === "profiles" || tab === "create";
