@@ -218,6 +218,19 @@
     .panel, .card { box-shadow: none; border: 1px solid #ccc; }
     tbody tr.paga { background: #eef7f1 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
+
+  /* ---------- Confirm modal + toast ---------- */
+  .modal-ov { position: fixed; inset: 0; background: rgba(10,20,16,.45); display: none; align-items: center; justify-content: center; padding: 20px; z-index: 50; }
+  .modal-ov.show { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 20px 60px rgba(0,0,0,.35); max-width: 420px; width: 100%; padding: 22px 22px 18px; }
+  .modal h3 { margin: 0 0 8px; font-size: 18px; font-weight: 800; color: var(--ink); }
+  .modal p { margin: 0 0 18px; color: var(--ink-soft); font-size: 15px; line-height: 1.5; white-space: pre-line; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+  .btn.danger-btn { background: var(--danger); border-color: var(--danger); color: #fff; }
+  .btn.danger-btn:hover { filter: brightness(.94); color: #fff; }
+  .toast { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%) translateY(20px); background: var(--ink); color: var(--surface); padding: 12px 20px; border-radius: 999px; font-size: 14px; font-weight: 600; box-shadow: 0 8px 30px rgba(0,0,0,.25); opacity: 0; pointer-events: none; transition: opacity .25s ease, transform .25s ease; z-index: 60; max-width: 90vw; text-align: center; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.err { background: var(--danger); color: #fff; }
 </style>
 
 <div class="wrap">
@@ -308,6 +321,18 @@
   <p class="footnote">Os dados ficam guardados só neste computador/navegador. Nada é enviado para a internet.</p>
 </div>
 
+<div class="modal-ov" id="confirmOv" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+  <div class="modal">
+    <h3 id="confirmTitle">Confirmar</h3>
+    <p id="confirmMsg"></p>
+    <div class="modal-actions">
+      <button class="btn" id="confirmCancel">Cancelar</button>
+      <button class="btn primary" id="confirmOk">Confirmar</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
 <script>
 (function () {
   "use strict";
@@ -318,6 +343,32 @@
   function uid() { return "u" + Math.random().toString(36).slice(2, 9); }
   function fmt(n) { return brl.format(isFinite(n) ? n : 0); }
   function mesLabel(key) { var p = key.split("-"); return MESES[parseInt(p[1],10)-1] + " / " + p[0]; }
+
+  // ---------- Custom confirm / toast (funcionam mesmo onde o confirm nativo é bloqueado) ----------
+  var _confirmCb = null;
+  function uiConfirm(opts) {
+    document.getElementById("confirmTitle").textContent = opts.title || "Confirmar";
+    document.getElementById("confirmMsg").textContent = opts.msg || "";
+    var ok = document.getElementById("confirmOk");
+    ok.textContent = opts.okText || "Confirmar";
+    ok.className = "btn " + (opts.danger ? "danger-btn" : "primary");
+    _confirmCb = opts.onOk || null;
+    document.getElementById("confirmOv").classList.add("show");
+    ok.focus();
+  }
+  function closeConfirm(run) {
+    document.getElementById("confirmOv").classList.remove("show");
+    var cb = _confirmCb; _confirmCb = null;
+    if (run && cb) cb();
+  }
+  var _toastT;
+  function uiToast(msg, kind) {
+    var t = document.getElementById("toast");
+    t.textContent = msg;
+    t.className = "toast show" + (kind === "err" ? " err" : "");
+    clearTimeout(_toastT);
+    _toastT = setTimeout(function () { t.className = "toast" + (kind === "err" ? " err" : ""); }, 2600);
+  }
 
   // ---------- Seed (Janeiro 2026 - dados reais da planilha) ----------
   function seedUnidades() {
@@ -513,10 +564,10 @@
     var tr = e.target.closest("tr"); var id = tr.dataset.id; var u = findUnit(id);
     if (btn.dataset.act === "pago") { u.pago = !u.pago; updateRowFlags(tr, u); renderCards(); save(); }
     else if (btn.dataset.act === "del") {
-      if (confirm('Remover "' + (u.nome || "esta unidade") + '"?')) {
+      uiConfirm({ title: "Remover unidade", msg: 'Remover "' + (u.nome || "esta unidade") + '"?', okText: "Remover", danger: true, onOk: function () {
         mes().unidades = mes().unidades.filter(function (x) { return x.id !== id; });
         renderUnits(); renderCards(); save();
-      }
+      }});
     }
   });
   function findUnit(id) { return mes().unidades.filter(function (u) { return u.id === id; })[0]; }
@@ -561,23 +612,29 @@
     var p = last.split("-"); var y = parseInt(p[0], 10); var m = parseInt(p[1], 10);
     m++; if (m > 12) { m = 1; y++; }
     var nk = y + "-" + (m < 10 ? "0" + m : m);
-    if (state.meses[nk]) { state.mesAtivo = nk; renderAll(); return; }
-    var copiar = Object.keys(state.meses).length ?
-      confirm("Criar " + mesLabel(nk) + " copiando as lojas e inquilinos do mês atual?\n\n(Os valores continuam iguais e ninguém fica marcado como pago ainda.)") : false;
-    var base = mes();
-    state.meses[nk] = {
-      unidades: copiar ? base.unidades.map(function (u) { return { id: uid(), nome: u.nome, inquilino: u.inquilino, dia: u.dia, valor: u.valor, pago: false }; }) : [],
-      despesas: copiar ? base.despesas.map(function (d) { return { id: uid(), desc: d.desc, valor: d.valor }; }) : []
-    };
-    state.mesAtivo = nk; renderAll(); save();
+    if (state.meses[nk]) { state.mesAtivo = nk; renderAll(); save(); return; }
+    uiConfirm({
+      title: "Novo mês",
+      msg: "Criar " + mesLabel(nk) + " copiando as lojas e inquilinos do mês atual?\n(Os valores continuam iguais e ninguém fica marcado como pago ainda.)",
+      okText: "Criar copiando",
+      onOk: function () {
+        var base = state.meses[state.mesAtivo];
+        state.meses[nk] = {
+          unidades: base.unidades.map(function (u) { return { id: uid(), nome: u.nome, inquilino: u.inquilino, dia: u.dia, valor: u.valor, pago: false }; }),
+          despesas: base.despesas.map(function (d) { return { id: uid(), desc: d.desc, valor: d.valor }; })
+        };
+        state.mesAtivo = nk; renderAll(); save();
+      }
+    });
   });
 
   document.getElementById("delMesBtn").addEventListener("click", function () {
-    if (Object.keys(state.meses).length <= 1) { alert("Você precisa manter pelo menos um mês."); return; }
-    if (!confirm("Apagar o mês " + mesLabel(state.mesAtivo) + " para sempre?")) return;
-    delete state.meses[state.mesAtivo];
-    state.mesAtivo = Object.keys(state.meses).sort().reverse()[0];
-    renderAll(); save();
+    if (Object.keys(state.meses).length <= 1) { uiToast("Você precisa manter pelo menos um mês."); return; }
+    uiConfirm({ title: "Apagar mês", msg: "Apagar o mês " + mesLabel(state.mesAtivo) + " para sempre?", okText: "Apagar", danger: true, onOk: function () {
+      delete state.meses[state.mesAtivo];
+      state.mesAtivo = Object.keys(state.meses).sort().reverse()[0];
+      renderAll(); save();
+    }});
   });
 
   // ---------- Export / Backup ----------
@@ -611,11 +668,11 @@
       try {
         var s = JSON.parse(r.result);
         if (!s.meses) throw new Error("inválido");
-        if (!confirm("Restaurar este backup? Os dados atuais serão substituídos.")) return;
-        state = s; if (!state.meses[state.mesAtivo]) state.mesAtivo = Object.keys(state.meses).sort().reverse()[0];
-        renderAll(); save();
-        alert("Backup restaurado com sucesso!");
-      } catch (err) { alert("Esse arquivo não parece ser um backup válido."); }
+        uiConfirm({ title: "Restaurar backup", msg: "Restaurar este backup? Os dados atuais serão substituídos.", okText: "Restaurar", danger: true, onOk: function () {
+          state = s; if (!state.meses[state.mesAtivo]) state.mesAtivo = Object.keys(state.meses).sort().reverse()[0];
+          renderAll(); save(); uiToast("Backup restaurado com sucesso!");
+        }});
+      } catch (err) { uiToast("Esse arquivo não parece ser um backup válido.", "err"); }
       e.target.value = "";
     };
     r.readAsText(file);
@@ -628,6 +685,14 @@
     a.href = url; a.download = name; document.body.appendChild(a); a.click();
     document.body.removeChild(a); setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   }
+
+  // ---------- Confirm modal wiring ----------
+  document.getElementById("confirmOk").addEventListener("click", function () { closeConfirm(true); });
+  document.getElementById("confirmCancel").addEventListener("click", function () { closeConfirm(false); });
+  document.getElementById("confirmOv").addEventListener("click", function (e) { if (e.target === this) closeConfirm(false); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && document.getElementById("confirmOv").classList.contains("show")) closeConfirm(false);
+  });
 
   // ---------- Go ----------
   state = load();
