@@ -158,16 +158,33 @@ async function shareOrCopy(text) {
 }
 
 /* votação de datas — votos individuais (8 pessoas) */
+/* votação de datas — cada opção tem data, horário e 4 níveis:
+   prefer (posso e prefiro) · can (posso) · maybe (talvez) · no (não posso).
+   "podem" = prefer + can. Preferência serve de desempate. */
 const DATE_OPTIONS = [
-  { id: "d1", date: "8 ago", weekday: "Sex", slot: "Jantar",
-    can: ["davi", "isabel", "luca", "mayara", "gabi", "vini", "vitor"], maybe: ["gab"], no: [] },
-  { id: "d2", date: "9 ago", weekday: "Sáb", slot: "Noite",
-    can: ["davi", "isabel", "luca", "mayara", "gabi", "vini", "vitor"], maybe: [], no: ["gab"] },
-  { id: "d3", date: "16 ago", weekday: "Sáb", slot: "Almoço",
-    can: ["davi", "luca", "mayara", "gab"], maybe: ["isabel", "vitor"], no: ["gabi", "vini"] },
-  { id: "d4", date: "23 ago", weekday: "Sáb", slot: "Jantar",
-    can: ["gabi", "vini", "vitor", "gab"], maybe: ["luca"], no: ["davi", "isabel", "mayara"] },
+  { id: "d1", date: "8 ago", weekday: "Sex", slot: "Jantar", time: "20h30",
+    prefer: ["davi", "isabel", "luca"], can: ["mayara", "gabi", "vini", "vitor"], maybe: ["gab"], no: [] },
+  { id: "d2", date: "9 ago", weekday: "Sáb", slot: "Noite", time: "21h00",
+    prefer: ["mayara", "gabi"], can: ["davi", "isabel", "luca", "vini", "vitor"], maybe: [], no: ["gab"] },
+  { id: "d3", date: "16 ago", weekday: "Sáb", slot: "Almoço", time: "13h00",
+    prefer: ["gab"], can: ["davi", "luca", "mayara"], maybe: ["isabel", "vitor"], no: ["gabi", "vini"] },
+  { id: "d4", date: "23 ago", weekday: "Sáb", slot: "Jantar", time: "20h00",
+    prefer: ["vitor", "gab"], can: ["gabi", "vini"], maybe: ["luca"], no: ["davi", "isabel", "mayara"] },
 ];
+/* meses p/ formatar datas escolhidas no seletor nativo */
+const MONTHS_ABBR = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+const WEEKDAYS_ABBR = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+/* "2026-07-25" -> { date:"25 jul", weekday:"Sáb" } (parse local, sem shift de fuso) */
+function fmtISODate(iso) {
+  const [y, m, d] = (iso || "").split("-").map(Number);
+  if (!y || !m || !d) return { date: iso || "", weekday: "" };
+  const dt = new Date(y, m - 1, d);
+  return { date: `${d} ${MONTHS_ABBR[m - 1]}`, weekday: WEEKDAYS_ABBR[dt.getDay()] };
+}
+/* "19:30" -> "19h30" */
+const fmtTime = (t) => (t ? t.replace(":", "h") : "");
+/* prazo da votação (demo; no app real viria do encontro) */
+const VOTE_DEADLINE = "qua, 6 ago, 20h";
 
 /* votação de lugares — pontuação 3/2/1 */
 const PLACE_BALLOTS = {
@@ -358,14 +375,15 @@ function Header({ title, sub }) {
 function HomeScreen({ go, encontros = [], dateVotes = {}, customDates = [] }) {
   const options = [...DATE_OPTIONS, ...customDates];
   const voters = new Set();
-  options.forEach((d) => [...d.can, ...d.maybe, ...d.no].forEach((p) => voters.add(p)));
+  options.forEach((d) => [...(d.prefer || []), ...d.can, ...d.maybe, ...d.no].forEach((p) => voters.add(p)));
   // considera meu voto registrado (persistido) mesmo que eu ainda não estivesse nas listas
   Object.entries(dateVotes).forEach(([, v]) => { if (v) voters.add(ME); });
   const meVoted = voters.has(ME) || Object.values(dateVotes).some(Boolean);
+  const missing = Math.max(0, 8 - voters.size);
   const myVoteOf = (d) => Object.prototype.hasOwnProperty.call(dateVotes, d.id) ? dateVotes[d.id]
-    : (d.can.includes(ME) ? "can" : d.maybe.includes(ME) ? "maybe" : d.no.includes(ME) ? "no" : null);
-  const canCount = (d) => d.can.filter((p) => p !== ME).length + (myVoteOf(d) === "can" ? 1 : 0);
-  const best = [...options].sort((a, b) => canCount(b) - canCount(a))[0];
+    : ((d.prefer || []).includes(ME) ? "prefer" : d.can.includes(ME) ? "can" : d.maybe.includes(ME) ? "maybe" : d.no.includes(ME) ? "no" : null);
+  const podemCount = (d) => [...(d.prefer || []), ...d.can].filter((p) => p !== ME).length + (["prefer", "can"].includes(myVoteOf(d)) ? 1 : 0);
+  const best = [...options].sort((a, b) => podemCount(b) - podemCount(a))[0];
 
   const steps = ["Escolher datas", "Escolher lugares", "Confirmar", "Reservar", "Encontro"];
   const currentStep = 1;
@@ -401,23 +419,28 @@ function HomeScreen({ go, encontros = [], dateVotes = {}, customDates = [] }) {
                 <div style={{ fontFamily: "Fraunces, serif", fontSize: 26, color: C.wine, fontWeight: 600 }}>{voters.size} <span style={{ fontSize: 16, color: C.mute }}>de 8</span></div>
               </div>
               <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: 13, color: C.mute, marginBottom: 6 }}>Prazo: 2 dias</div>
+                <div style={{ fontSize: 12, color: C.mute, marginBottom: 6 }}>Prazo: {VOTE_DEADLINE}</div>
                 <EightMeter filled={voters.size} />
               </div>
             </div>
 
+            {/* a Home lidera com a próxima ação */}
             {!meVoted ? (
               <div style={{ background: C.sandDeep, borderRadius: 12, padding: "10px 12px", marginBottom: 12, fontSize: 13, color: C.wine, fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}>
-                <HelpCircle size={16} /> Falta apenas você votar.
+                <HelpCircle size={16} /> Falta você votar — some-se aos {voters.size} para fechar a data.
+              </div>
+            ) : missing > 0 ? (
+              <div style={{ background: C.sandDeep, borderRadius: 12, padding: "10px 12px", marginBottom: 12, fontSize: 13, color: C.wine, fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}>
+                <Clock size={16} /> Faltam {missing} {missing === 1 ? "voto" : "votos"} pra fechar a data. Líder: <b>&nbsp;{best.weekday}, {best.date}{best.time ? ` · ${best.time}` : ""}</b>.
               </div>
             ) : (
               <div style={{ background: "#EAF0E4", borderRadius: 12, padding: "10px 12px", marginBottom: 12, fontSize: 13, color: C.olive, fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}>
-                <Check size={16} /> Seu voto já entrou. Todo mundo pode em <b>&nbsp;{best.date}</b>!
+                <Check size={16} /> Todos votaram! Melhor data: <b>&nbsp;{best.weekday}, {best.date}{best.time ? ` · ${best.time}` : ""}</b>.
               </div>
             )}
 
             <Btn full onClick={() => go("calendar")}>
-              <Vote size={18} /> Votar nas datas
+              <Vote size={18} /> {meVoted ? "Rever meu voto nas datas" : "Votar agora nas datas"}
             </Btn>
           </div>
         </Card>
@@ -474,76 +497,95 @@ function HomeScreen({ go, encontros = [], dateVotes = {}, customDates = [] }) {
 function CalendarScreen({ dateVotes = {}, onVote, customDates = [], onAddDate }) {
   const options = [...DATE_OPTIONS, ...customDates];
   const [adding, setAdding] = useState(false);
-  const [nd, setNd] = useState({ date: "", weekday: "Sáb", slot: "Jantar" });
+  const [nd, setNd] = useState({ iso: "", time: "", slot: "Jantar" });
 
   // meu voto efetivo: o que registrei (persistido) ou minha posição pré-existente na lista
   const myVote = (d) => {
     if (Object.prototype.hasOwnProperty.call(dateVotes, d.id)) return dateVotes[d.id];
+    if ((d.prefer || []).includes(ME)) return "prefer";
     if (d.can.includes(ME)) return "can";
     if (d.maybe.includes(ME)) return "maybe";
     if (d.no.includes(ME)) return "no";
     return null;
   };
+  const countBase = (d, key) => (d[key] || []).filter((p) => p !== ME).length;
   const tally = (d) => {
     const v = myVote(d);
-    return {
-      can: d.can.filter((p) => p !== ME).length + (v === "can" ? 1 : 0),
-      maybe: d.maybe.filter((p) => p !== ME).length + (v === "maybe" ? 1 : 0),
-      no: d.no.filter((p) => p !== ME).length + (v === "no" ? 1 : 0),
-    };
+    const prefer = countBase(d, "prefer") + (v === "prefer" ? 1 : 0);
+    const can = countBase(d, "can") + (v === "can" ? 1 : 0);
+    const maybe = countBase(d, "maybe") + (v === "maybe" ? 1 : 0);
+    const no = countBase(d, "no") + (v === "no" ? 1 : 0);
+    return { prefer, can, maybe, no, podem: prefer + can };
   };
   const respFor = (d) => {
-    const base = [...d.can, ...d.maybe, ...d.no].filter((p) => p !== ME);
+    const base = [...(d.prefer || []), ...d.can, ...d.maybe, ...d.no].filter((p) => p !== ME);
     if (myVote(d)) base.push(ME);
     return base;
   };
-  const ranked = [...options].sort((a, b) => tally(b).can - tally(a).can);
+  // melhor data: mais gente pode; empate → mais gente prefere
+  const ranked = [...options].sort((a, b) => {
+    const ta = tally(a), tb = tally(b);
+    return (tb.podem - ta.podem) || (tb.prefer - ta.prefer);
+  });
   const best = ranked[0];
   const myVoteCount = options.filter((d) => myVote(d)).length;
 
-  const opt = (d, val, icon, label, col) => {
-    const active = myVote(d) === val;
+  const LEVELS = [
+    { val: "prefer", icon: <Heart size={15} />, label: "Prefiro", col: C.terra },
+    { val: "can", icon: <Check size={15} />, label: "Posso", col: C.olive },
+    { val: "maybe", icon: <HelpCircle size={15} />, label: "Talvez", col: C.gold },
+    { val: "no", icon: <X size={15} />, label: "Não", col: C.wineSoft },
+  ];
+  const opt = (d, lv) => {
+    const active = myVote(d) === lv.val;
     return (
-      <button type="button" onClick={() => onVote(d.id, val)} aria-pressed={active}
-        aria-label={`${label} em ${d.date}`}
+      <button type="button" key={lv.val} onClick={() => onVote(d.id, lv.val)} aria-pressed={active}
+        aria-label={`${lv.label} em ${d.date}`}
         style={{
-          flex: 1, border: `1.5px solid ${active ? col : C.line}`,
-          background: active ? col : "#fff", color: active ? "#fff" : C.mute,
-          borderRadius: 12, padding: "9px 4px", cursor: "pointer",
-          display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
-          fontFamily: "Archivo, sans-serif", fontWeight: 600, fontSize: 12,
+          flex: 1, minWidth: 0, border: `1.5px solid ${active ? lv.col : C.line}`,
+          background: active ? lv.col : "#fff", color: active ? "#fff" : C.mute,
+          borderRadius: 11, padding: "8px 2px", cursor: "pointer",
+          display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
+          fontFamily: "Archivo, sans-serif", fontWeight: 600, fontSize: 11.5,
         }}>
-        {icon} {label}
+        {lv.icon} {lv.label}
       </button>
     );
   };
 
   const submitDate = () => {
-    if (!nd.date.trim()) return;
-    onAddDate({ date: nd.date.trim(), weekday: nd.weekday, slot: nd.slot });
-    setNd({ date: "", weekday: "Sáb", slot: "Jantar" });
+    if (!nd.iso) return;
+    const f = fmtISODate(nd.iso);
+    onAddDate({ date: f.date, weekday: f.weekday, slot: nd.slot, time: fmtTime(nd.time) });
+    setNd({ iso: "", time: "", slot: "Jantar" });
     setAdding(false);
   };
-  const selStyle = { border: `1.5px solid ${C.line}`, borderRadius: 12, padding: "11px 12px", fontSize: 14, fontFamily: "Archivo, sans-serif", background: "#fff", color: C.ink, outline: "none", flex: 1, minWidth: 0 };
+  const fieldStyle = { border: `1.5px solid ${C.line}`, borderRadius: 12, padding: "11px 12px", fontSize: 15, fontFamily: "Archivo, sans-serif", background: "#fff", color: C.ink, outline: "none", width: "100%", marginTop: 4 };
 
   return (
     <div>
-      <Header title="Quando conseguimos?" sub="Marque sua disponibilidade. Contamos voto por voto — os 8." />
+      <Header title="Quando conseguimos?" sub="Marque data e horário. Voto individual — contam os 8." />
 
       <div style={{ padding: "8px 20px 20px" }}>
-        <Card style={{ marginBottom: 18, padding: 16, background: "linear-gradient(135deg,#fff,#F7EFE6)" }}>
+        {/* melhor data */}
+        <Card style={{ marginBottom: 14, padding: 16, background: "linear-gradient(135deg,#fff,#F7EFE6)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
             <Sparkles size={16} color={C.terra} />
             <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", color: C.terra }}>Melhor data até agora</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
-              <div style={{ fontFamily: "Fraunces, serif", fontSize: 24, color: C.wine, fontWeight: 600 }}>{best.weekday}, {best.date}</div>
-              <div style={{ fontSize: 13, color: C.mute }}>{best.slot} · {tally(best).can} de 8 podem</div>
+              <div style={{ fontFamily: "Fraunces, serif", fontSize: 24, color: C.wine, fontWeight: 600 }}>{best.weekday}, {best.date}{best.time ? ` · ${best.time}` : ""}</div>
+              <div style={{ fontSize: 13, color: C.mute }}>{best.slot} · {tally(best).podem} de 8 podem · {tally(best).prefer} preferem</div>
             </div>
-            <EightMeter filled={tally(best).can} color={C.terra} />
+            <EightMeter filled={tally(best).podem} color={C.terra} />
           </div>
         </Card>
+
+        {/* regras da votação */}
+        <div style={{ background: C.sandDeep, borderRadius: 12, padding: "10px 12px", marginBottom: 14, fontSize: 12, color: C.ink, lineHeight: 1.5 }}>
+          <b style={{ color: C.wine }}>Como funciona:</b> voto individual (os 8), marque quantas datas quiser, mude quando quiser. Prazo: <b>{VOTE_DEADLINE}</b>. Empate no topo → decidem no grupo.
+        </div>
 
         <div style={{ fontSize: 12.5, color: C.mute, marginBottom: 14, display: "flex", alignItems: "center", gap: 6 }}>
           <Check size={14} color={C.olive} /> Você marcou {myVoteCount} de {options.length} {options.length === 1 ? "data" : "datas"}.
@@ -555,24 +597,24 @@ function CalendarScreen({ dateVotes = {}, onVote, customDates = [], onAddDate })
           return (
             <Card key={d.id} style={{ marginBottom: 14, padding: 16, border: isBest ? `1.5px solid ${C.terra}` : `1px solid ${C.line}` }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-                <div>
+                <div style={{ minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                     <span style={{ fontFamily: "Fraunces, serif", fontSize: 20, color: C.wine, fontWeight: 600 }}>{d.date}</span>
                     <Pill>{d.weekday}</Pill>
+                    {d.time && <Pill bg={C.wine} fg="#fff">{d.time}</Pill>}
                     <Pill bg={C.sandDeep}>{d.slot}</Pill>
                     {d.custom && <Pill bg={C.gold} fg="#fff">Sua sugestão</Pill>}
                   </div>
                   <div style={{ marginTop: 8 }}><AvatarStack ids={respFor(d)} size={26} /></div>
                 </div>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontFamily: "Fraunces, serif", fontSize: 22, color: C.olive, fontWeight: 700 }}>{t.can}<span style={{ fontSize: 13, color: C.mute }}>/8</span></div>
+                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                  <div style={{ fontFamily: "Fraunces, serif", fontSize: 22, color: C.olive, fontWeight: 700 }}>{t.podem}<span style={{ fontSize: 13, color: C.mute }}>/8</span></div>
                   <div style={{ fontSize: 11, color: C.mute }}>podem</div>
+                  {t.prefer > 0 && <div style={{ fontSize: 11, color: C.terra, fontWeight: 600 }}>{t.prefer} preferem</div>}
                 </div>
               </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                {opt(d, "can", <Check size={16} />, "Posso", C.olive)}
-                {opt(d, "maybe", <HelpCircle size={16} />, "Talvez", C.gold)}
-                {opt(d, "no", <X size={16} />, "Não posso", C.wineSoft)}
+              <div style={{ display: "flex", gap: 6 }}>
+                {LEVELS.map((lv) => opt(d, lv))}
               </div>
             </Card>
           );
@@ -583,24 +625,26 @@ function CalendarScreen({ dateVotes = {}, onVote, customDates = [], onAddDate })
         ) : (
           <Card style={{ padding: 16 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: C.wine, marginBottom: 10 }}>Sugerir uma data nova</div>
-            <label style={{ fontSize: 12, color: C.mute, fontWeight: 600 }}>Data
-              <input value={nd.date} onChange={(e) => setNd((s) => ({ ...s, date: e.target.value }))}
-                placeholder="Ex.: 30 ago" style={{ ...selStyle, width: "100%", marginTop: 4, marginBottom: 10 }} />
-            </label>
             <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-              <label style={{ fontSize: 12, color: C.mute, fontWeight: 600, flex: 1 }}>Dia
-                <select value={nd.weekday} onChange={(e) => setNd((s) => ({ ...s, weekday: e.target.value }))} style={{ ...selStyle, width: "100%", marginTop: 4 }}>
-                  {["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"].map((w) => <option key={w}>{w}</option>)}
-                </select>
+              <label style={{ fontSize: 12, color: C.mute, fontWeight: 600, flex: 1.2 }}>Data
+                <input type="date" value={nd.iso} onChange={(e) => setNd((s) => ({ ...s, iso: e.target.value }))} style={fieldStyle} />
               </label>
-              <label style={{ fontSize: 12, color: C.mute, fontWeight: 600, flex: 1 }}>Momento
-                <select value={nd.slot} onChange={(e) => setNd((s) => ({ ...s, slot: e.target.value }))} style={{ ...selStyle, width: "100%", marginTop: 4 }}>
-                  {["Manhã", "Almoço", "Tarde", "Jantar", "Noite"].map((sl) => <option key={sl}>{sl}</option>)}
-                </select>
+              <label style={{ fontSize: 12, color: C.mute, fontWeight: 600, flex: 1 }}>Horário
+                <input type="time" value={nd.time} onChange={(e) => setNd((s) => ({ ...s, time: e.target.value }))} style={fieldStyle} />
               </label>
             </div>
+            <label style={{ fontSize: 12, color: C.mute, fontWeight: 600, display: "block", marginBottom: 12 }}>Momento
+              <select value={nd.slot} onChange={(e) => setNd((s) => ({ ...s, slot: e.target.value }))} style={fieldStyle}>
+                {["Manhã", "Almoço", "Tarde", "Jantar", "Noite"].map((sl) => <option key={sl}>{sl}</option>)}
+              </select>
+            </label>
+            {nd.iso && (
+              <div style={{ fontSize: 12.5, color: C.olive, marginBottom: 12 }}>
+                Vai entrar como: <b>{fmtISODate(nd.iso).weekday}, {fmtISODate(nd.iso).date}{nd.time ? ` · ${fmtTime(nd.time)}` : ""}</b>
+              </div>
+            )}
             <div style={{ display: "flex", gap: 8 }}>
-              <Btn small full disabled={!nd.date.trim()} onClick={submitDate}><Plus size={15} /> Adicionar data</Btn>
+              <Btn small full disabled={!nd.iso} onClick={submitDate}><Plus size={15} /> Adicionar data</Btn>
               <Btn small variant="ghost" onClick={() => setAdding(false)}>Cancelar</Btn>
             </div>
           </Card>
@@ -618,22 +662,39 @@ function ExploreScreen({ go, onSuggest, suggested, onAddCustom, livePlaces }) {
   const [query, setQuery] = useState("");
   const [newRegion, setNewRegion] = useState("Zona Sul");
   const [addOpen, setAddOpen] = useState(false);
+  const [sort, setSort] = useState("rel");
+  const [amenities, setAmenities] = useState([]);
+  const [showFilters, setShowFilters] = useState(false);
+
+  const AMENITIES = ["Área externa", "Reserva", "Música", "Vista", "Vegetariano", "Grupo"];
+  const SORTS = [
+    { id: "rel", label: "Relevância" }, { id: "rating", label: "Melhor nota" },
+    { id: "price", label: "Mais barato" }, { id: "dist", label: "Mais perto" },
+  ];
+  const toggleAmenity = (a) => setAmenities((s) => (s.includes(a) ? s.filter((x) => x !== a) : [...s, a]));
+  const distKm = (p) => parseFloat((p.dist || "").replace(/[^\d.]/g, "")) || 999;
 
   const q = norm(query.trim());
   const list = useMemo(() => {
-    return livePlaces.filter((p) => {
+    const filtered = livePlaces.filter((p) => {
       if (cat !== "Todos" && p.cat !== cat) return false;
       if (region !== "Todas" && zoneOf(p.hood) !== region) return false;
+      if (amenities.length && !amenities.every((a) => (p.tags || []).includes(a))) return false;
       if (q) {
         const hay = norm([p.name, p.hood, zoneOf(p.hood), p.cat, p.desc, ...(p.tags || [])].join(" "));
         if (!hay.includes(q)) return false;
       }
       return true;
     });
-  }, [cat, region, q, livePlaces]);
+    const sorted = [...filtered];
+    if (sort === "rating") sorted.sort((a, b) => b.rating - a.rating);
+    else if (sort === "price") sorted.sort((a, b) => a.price - b.price);
+    else if (sort === "dist") sorted.sort((a, b) => distKm(a) - distKm(b));
+    return sorted;
+  }, [cat, region, q, amenities, sort, livePlaces]);
 
-  const clearFilters = () => { setCat("Todos"); setRegion("Todas"); setQuery(""); };
-  const activeFilters = (cat !== "Todos" ? 1 : 0) + (region !== "Todas" ? 1 : 0) + (q ? 1 : 0);
+  const clearFilters = () => { setCat("Todos"); setRegion("Todas"); setQuery(""); setAmenities([]); setSort("rel"); };
+  const activeFilters = (cat !== "Todos" ? 1 : 0) + (region !== "Todas" ? 1 : 0) + (q ? 1 : 0) + amenities.length + (sort !== "rel" ? 1 : 0);
 
   const createCustom = () => {
     const nm = query.trim();
@@ -690,17 +751,35 @@ function ExploreScreen({ go, onSuggest, suggested, onAddCustom, livePlaces }) {
           {cats.map((c) => chip(c, cat === c, () => setCat(c), "c-" + c))}
         </div>
 
-        {/* contador + limpar */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-          <div style={{ fontSize: 12.5, color: C.mute, display: "flex", alignItems: "center", gap: 6 }}>
-            <SlidersHorizontal size={14} />
+        {/* contador + filtros + limpar */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <div style={{ fontSize: 12.5, color: C.mute }}>
             {list.length} {list.length === 1 ? "lugar" : "lugares"}
             {activeFilters > 0 && <span> · {activeFilters} {activeFilters === 1 ? "filtro" : "filtros"}</span>}
           </div>
-          {activeFilters > 0 && (
-            <button onClick={clearFilters} style={{ border: "none", background: "none", color: C.terra, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Limpar</button>
-          )}
+          <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+            <button type="button" onClick={() => setShowFilters((o) => !o)} aria-expanded={showFilters}
+              style={{ border: "none", background: "none", color: showFilters ? C.wine : C.terra, fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+              <SlidersHorizontal size={14} /> Filtros
+            </button>
+            {activeFilters > 0 && (
+              <button type="button" onClick={clearFilters} style={{ border: "none", background: "none", color: C.mute, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Limpar</button>
+            )}
+          </div>
         </div>
+
+        {showFilters && (
+          <Card style={{ padding: 14, marginBottom: 14 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: C.goldDeep, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Ordenar por</div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+              {SORTS.map((s) => chip(s.label, sort === s.id, () => setSort(s.id), "s-" + s.id))}
+            </div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: C.goldDeep, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Comodidades</div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {AMENITIES.map((a) => chip(a, amenities.includes(a), () => toggleAmenity(a), "a-" + a))}
+            </div>
+          </Card>
+        )}
 
         {/* estado vazio + criar lugar novo */}
         {list.length === 0 && (
@@ -980,6 +1059,11 @@ function ConfirmedScreen({ presence = null, onSetGoing, showToast }) {
     try { w = window.open(url, "_blank", "noopener"); } catch { /* bloqueado */ }
     if (!w) { const m = await shareOrCopy(CONFIRMED.address); if (showToast) showToast(m === "copy" ? "Endereço copiado." : CONFIRMED.address); }
   };
+  const lateNotice = async () => {
+    const msg = `Galera, vou me atrasar uns 15 min pro ${CONFIRMED.name} no ${p.name}. Podem ir pedindo, já tô a caminho! 🙏`;
+    const m = await shareOrCopy(msg);
+    if (showToast) showToast(m === "share" ? "Aviso enviado!" : m === "copy" ? "Aviso de atraso copiado — cola no grupo." : "Copie o aviso e mande no grupo.");
+  };
   const addToCalendar = () => {
     const ics = [
       "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Sucesso Absoluto//PT-BR", "BEGIN:VEVENT",
@@ -1046,11 +1130,12 @@ function ConfirmedScreen({ presence = null, onSetGoing, showToast }) {
               </Btn>
               <Btn variant="ghost" onClick={() => { onSetGoing(false); showToast && showToast("Presença cancelada."); }} aria-label="Não vou"><X size={16} /></Btn>
             </div>
-            <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
               <Btn small full variant="ghost" onClick={addToCalendar}><CalendarPlus size={15} /> Calendário</Btn>
               <Btn small full variant="ghost" onClick={openMap}><MapPin size={15} /> Mapa</Btn>
               <Btn small full variant="terra" onClick={shareWhats}><Share2 size={15} /> WhatsApp</Btn>
             </div>
+            <Btn small full variant="ghost" onClick={lateNotice}><Clock size={15} /> Informar atraso</Btn>
           </div>
         </Card>
 
@@ -1260,6 +1345,7 @@ function MemoriesScreen({ infractions = [], onDenounce, onRemoveInfraction }) {
   ];
   const [reportOpen, setReportOpen] = useState(false);
   const [rep, setRep] = useState({ place: "", culprits: "", detail: "" });
+  const [confirmDel, setConfirmDel] = useState(null); // id aguardando confirmação de exclusão
   const inputStyle = { width: "100%", border: `1.5px solid ${C.line}`, borderRadius: 12, padding: "11px 12px", fontSize: 14, fontFamily: "Archivo, sans-serif", background: "#fff", color: C.ink, outline: "none" };
   const submitReport = () => {
     if (!rep.place.trim()) return;
@@ -1336,7 +1422,15 @@ function MemoriesScreen({ infractions = [], onDenounce, onRemoveInfraction }) {
             <Card key={inf.id} style={{ marginBottom: 14, padding: 16, border: `1px solid ${C.scandalDeep}` }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
                 <span style={{ display: "inline-block", background: C.scandal, color: "#fff", fontSize: 10.5, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", padding: "3px 9px", borderRadius: 4 }}>Denúncia nova</span>
-                <button type="button" onClick={() => onRemoveInfraction(inf.id)} aria-label="Remover denúncia" style={{ border: "none", background: "none", color: C.mute, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Remover</button>
+                {confirmDel === inf.id ? (
+                  <span style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                    <span style={{ fontSize: 12, color: C.mute }}>Excluir?</span>
+                    <button type="button" onClick={() => { onRemoveInfraction(inf.id); setConfirmDel(null); }} style={{ border: "none", background: "none", color: C.scandal, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Sim</button>
+                    <button type="button" onClick={() => setConfirmDel(null)} style={{ border: "none", background: "none", color: C.mute, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Não</button>
+                  </span>
+                ) : (
+                  <button type="button" onClick={() => setConfirmDel(inf.id)} aria-label="Remover denúncia" style={{ border: "none", background: "none", color: C.mute, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Remover</button>
+                )}
               </div>
               <div style={{ fontFamily: "Fraunces, serif", fontSize: 20, color: C.wine, fontWeight: 600, margin: "8px 0 2px" }}>Flagra no {inf.place}</div>
               {inf.culprits && <div style={{ fontSize: 13, color: C.ink, marginBottom: 6 }}>Suspeitos: <b>{inf.culprits}</b></div>}
@@ -1748,8 +1842,8 @@ export default function App() {
   const voteDate = (dateId, val) => setDateVotes((s) => ({ ...s, [dateId]: s[dateId] === val ? null : val }));
   const addDate = (d) => {
     const id = "cd" + (++nextId.current);
-    setCustomDates((s) => [...s, { id, date: d.date, weekday: d.weekday, slot: d.slot, can: [], maybe: [], no: [], custom: true }]);
-    setDateVotes((s) => ({ ...s, [id]: "can" }));
+    setCustomDates((s) => [...s, { id, date: d.date, weekday: d.weekday, slot: d.slot, time: d.time || "", prefer: [], can: [], maybe: [], no: [], custom: true }]);
+    setDateVotes((s) => ({ ...s, [id]: "prefer" }));
     showToast(`Data "${d.date}" sugerida ao grupo.`);
   };
   const createEncontro = (data) => {
