@@ -120,6 +120,43 @@ const zoneOf = (hood) => ZONE_OF[hood] || (REGIONS.includes(hood) ? hood : "Outr
 /* normaliza p/ busca (minúsculas, sem acento) */
 const norm = (s) => (s || "").toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
+/* ---------- persistencia local (sem backend; pronto p/ trocar por API) ----------
+   Toda a "verdade" que o usuario cria vive aqui e sobrevive ao refresh.
+   Se o localStorage estiver bloqueado (iframe restrito), cai para memoria. */
+const LS_KEY = "sa:v1";
+const store = {
+  read() {
+    try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; }
+    catch { return {}; }
+  },
+  write(obj) {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(obj)); } catch { /* ignora */ }
+  },
+  clear() { try { localStorage.removeItem(LS_KEY); } catch { /* ignora */ } },
+};
+
+/* copiar/compartilhar robusto (Web Share -> Clipboard -> fallback manual).
+   Retorna o metodo usado, para um feedback honesto ao usuario. */
+async function shareOrCopy(text) {
+  try {
+    if (navigator.share) { await navigator.share({ text }); return "share"; }
+  } catch { /* cancelado/indisponivel -> tenta copiar */ }
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text); return "copy";
+    }
+  } catch { /* segue p/ fallback */ }
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    if (ok) return "copy";
+  } catch { /* nada funcionou */ }
+  return "manual";
+}
+
 /* votação de datas — votos individuais (8 pessoas) */
 const DATE_OPTIONS = [
   { id: "d1", date: "8 ago", weekday: "Sex", slot: "Jantar",
@@ -255,7 +292,7 @@ function Card({ children, style, className = "" }) {
   );
 }
 
-function Btn({ children, onClick, variant = "solid", full, small, disabled }) {
+function Btn({ children, onClick, variant = "solid", full, small, disabled, type = "button", ...rest }) {
   const base = {
     border: "none", borderRadius: 14, cursor: disabled ? "not-allowed" : "pointer",
     fontWeight: 600, fontFamily: "Archivo, sans-serif",
@@ -271,8 +308,8 @@ function Btn({ children, onClick, variant = "solid", full, small, disabled }) {
     olive: { ...base, background: C.olive, color: "#fff", boxShadow: disabled ? "none" : `${SH.btn} rgba(74,90,58,.6)` },
   };
   return (
-    <button onClick={disabled ? undefined : onClick} disabled={disabled}
-      className={`sa-btn ${disabled ? "is-disabled" : ""}`} style={styles[variant]}
+    <button type={type} onClick={disabled ? undefined : onClick} disabled={disabled}
+      className={`sa-btn ${disabled ? "is-disabled" : ""}`} style={styles[variant]} {...rest}
     >{children}</button>
   );
 }
@@ -318,11 +355,17 @@ function Header({ title, sub }) {
 /* ---------- TELAS ---------- */
 
 /* INÍCIO */
-function HomeScreen({ go }) {
+function HomeScreen({ go, encontros = [], dateVotes = {}, customDates = [] }) {
+  const options = [...DATE_OPTIONS, ...customDates];
   const voters = new Set();
-  DATE_OPTIONS.forEach((d) => [...d.can, ...d.maybe, ...d.no].forEach((p) => voters.add(p)));
-  const meVoted = voters.has(ME);
-  const best = [...DATE_OPTIONS].sort((a, b) => b.can.length - a.can.length)[0];
+  options.forEach((d) => [...d.can, ...d.maybe, ...d.no].forEach((p) => voters.add(p)));
+  // considera meu voto registrado (persistido) mesmo que eu ainda não estivesse nas listas
+  Object.entries(dateVotes).forEach(([, v]) => { if (v) voters.add(ME); });
+  const meVoted = voters.has(ME) || Object.values(dateVotes).some(Boolean);
+  const myVoteOf = (d) => Object.prototype.hasOwnProperty.call(dateVotes, d.id) ? dateVotes[d.id]
+    : (d.can.includes(ME) ? "can" : d.maybe.includes(ME) ? "maybe" : d.no.includes(ME) ? "no" : null);
+  const canCount = (d) => d.can.filter((p) => p !== ME).length + (myVoteOf(d) === "can" ? 1 : 0);
+  const best = [...options].sort((a, b) => canCount(b) - canCount(a))[0];
 
   const steps = ["Escolher datas", "Escolher lugares", "Confirmar", "Reservar", "Encontro"];
   const currentStep = 1;
@@ -393,7 +436,25 @@ function HomeScreen({ go }) {
           </div>
         </Card>
 
-        <SectionTitle eyebrow="Enquanto isso" title="Última memória" action={<span onClick={() => go("memories")} style={{ color: C.terra, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Ver todas</span>} />
+        {encontros.length > 0 && (
+          <div style={{ marginBottom: 18 }}>
+            <SectionTitle eyebrow="Criados por você" title={`${encontros.length} ${encontros.length === 1 ? "encontro" : "encontros"}`} />
+            {encontros.map((e) => (
+              <Card key={e.id} style={{ padding: 14, marginBottom: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 10, background: C.foil, flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, color: C.wine, fontFamily: "Fraunces, serif", fontSize: 16 }}>{e.name}</div>
+                    <div style={{ fontSize: 12, color: C.mute }}>{[e.type, e.price, e.period].filter(Boolean).join(" · ")}</div>
+                  </div>
+                  <Pill bg="#EAF0E4" fg={C.olive}>Votação aberta</Pill>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        <SectionTitle eyebrow="Enquanto isso" title="Última memória" action={<button type="button" onClick={() => go("memories")} style={{ background: "none", border: "none", color: C.terra, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Ver todas</button>} />
         <Card>
           <div style={{ display: "flex", gap: 14, padding: 14 }}>
             <div style={{ width: 64, height: 64, borderRadius: 14, background: MEMORIES[0].img, flexShrink: 0 }} />
@@ -410,38 +471,41 @@ function HomeScreen({ go }) {
 }
 
 /* CALENDÁRIO / VOTAÇÃO DE DATAS */
-function CalendarScreen() {
-  const [votes, setVotes] = useState(() => {
-    const v = {};
-    DATE_OPTIONS.forEach((d) => {
-      if (d.can.includes(ME)) v[d.id] = "can";
-      else if (d.maybe.includes(ME)) v[d.id] = "maybe";
-      else if (d.no.includes(ME)) v[d.id] = "no";
-      else v[d.id] = null;
-    });
-    return v;
-  });
+function CalendarScreen({ dateVotes = {}, onVote, customDates = [], onAddDate }) {
+  const options = [...DATE_OPTIONS, ...customDates];
+  const [adding, setAdding] = useState(false);
+  const [nd, setNd] = useState({ date: "", weekday: "Sáb", slot: "Jantar" });
 
-  const tally = (d) => {
-    const can = d.can.filter((p) => p !== ME).length + (votes[d.id] === "can" ? 1 : 0);
-    const maybe = d.maybe.filter((p) => p !== ME).length + (votes[d.id] === "maybe" ? 1 : 0);
-    const no = d.no.filter((p) => p !== ME).length + (votes[d.id] === "no" ? 1 : 0);
-    return { can, maybe, no };
+  // meu voto efetivo: o que registrei (persistido) ou minha posição pré-existente na lista
+  const myVote = (d) => {
+    if (Object.prototype.hasOwnProperty.call(dateVotes, d.id)) return dateVotes[d.id];
+    if (d.can.includes(ME)) return "can";
+    if (d.maybe.includes(ME)) return "maybe";
+    if (d.no.includes(ME)) return "no";
+    return null;
   };
-
-  const ranked = [...DATE_OPTIONS].sort((a, b) => tally(b).can - tally(a).can);
-  const best = ranked[0];
-
+  const tally = (d) => {
+    const v = myVote(d);
+    return {
+      can: d.can.filter((p) => p !== ME).length + (v === "can" ? 1 : 0),
+      maybe: d.maybe.filter((p) => p !== ME).length + (v === "maybe" ? 1 : 0),
+      no: d.no.filter((p) => p !== ME).length + (v === "no" ? 1 : 0),
+    };
+  };
   const respFor = (d) => {
     const base = [...d.can, ...d.maybe, ...d.no].filter((p) => p !== ME);
-    if (votes[d.id]) base.push(ME);
+    if (myVote(d)) base.push(ME);
     return base;
   };
+  const ranked = [...options].sort((a, b) => tally(b).can - tally(a).can);
+  const best = ranked[0];
+  const myVoteCount = options.filter((d) => myVote(d)).length;
 
   const opt = (d, val, icon, label, col) => {
-    const active = votes[d.id] === val;
+    const active = myVote(d) === val;
     return (
-      <button onClick={() => setVotes((s) => ({ ...s, [d.id]: val }))}
+      <button type="button" onClick={() => onVote(d.id, val)} aria-pressed={active}
+        aria-label={`${label} em ${d.date}`}
         style={{
           flex: 1, border: `1.5px solid ${active ? col : C.line}`,
           background: active ? col : "#fff", color: active ? "#fff" : C.mute,
@@ -453,6 +517,14 @@ function CalendarScreen() {
       </button>
     );
   };
+
+  const submitDate = () => {
+    if (!nd.date.trim()) return;
+    onAddDate({ date: nd.date.trim(), weekday: nd.weekday, slot: nd.slot });
+    setNd({ date: "", weekday: "Sáb", slot: "Jantar" });
+    setAdding(false);
+  };
+  const selStyle = { border: `1.5px solid ${C.line}`, borderRadius: 12, padding: "11px 12px", fontSize: 14, fontFamily: "Archivo, sans-serif", background: "#fff", color: C.ink, outline: "none", flex: 1, minWidth: 0 };
 
   return (
     <div>
@@ -473,23 +545,22 @@ function CalendarScreen() {
           </div>
         </Card>
 
-        <div style={{ display: "flex", gap: 8, marginBottom: 16, overflowX: "auto", paddingBottom: 4 }}>
-          {["Sexta", "Sábado", "Domingo", "Feriado"].map((f) => (
-            <span key={f} style={{ background: "#fff", border: `1px solid ${C.line}`, borderRadius: 999, padding: "6px 14px", fontSize: 13, color: C.ink, whiteSpace: "nowrap", fontWeight: 500 }}>{f}</span>
-          ))}
+        <div style={{ fontSize: 12.5, color: C.mute, marginBottom: 14, display: "flex", alignItems: "center", gap: 6 }}>
+          <Check size={14} color={C.olive} /> Você marcou {myVoteCount} de {options.length} {options.length === 1 ? "data" : "datas"}.
         </div>
 
-        {DATE_OPTIONS.map((d) => {
+        {options.map((d) => {
           const t = tally(d);
           const isBest = d.id === best.id;
           return (
             <Card key={d.id} style={{ marginBottom: 14, padding: 16, border: isBest ? `1.5px solid ${C.terra}` : `1px solid ${C.line}` }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
                 <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                     <span style={{ fontFamily: "Fraunces, serif", fontSize: 20, color: C.wine, fontWeight: 600 }}>{d.date}</span>
                     <Pill>{d.weekday}</Pill>
                     <Pill bg={C.sandDeep}>{d.slot}</Pill>
+                    {d.custom && <Pill bg={C.gold} fg="#fff">Sua sugestão</Pill>}
                   </div>
                   <div style={{ marginTop: 8 }}><AvatarStack ids={respFor(d)} size={26} /></div>
                 </div>
@@ -507,7 +578,33 @@ function CalendarScreen() {
           );
         })}
 
-        <Btn full variant="ghost"><Plus size={16} /> Sugerir outra data</Btn>
+        {!adding ? (
+          <Btn full variant="ghost" onClick={() => setAdding(true)}><Plus size={16} /> Sugerir outra data</Btn>
+        ) : (
+          <Card style={{ padding: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.wine, marginBottom: 10 }}>Sugerir uma data nova</div>
+            <label style={{ fontSize: 12, color: C.mute, fontWeight: 600 }}>Data
+              <input value={nd.date} onChange={(e) => setNd((s) => ({ ...s, date: e.target.value }))}
+                placeholder="Ex.: 30 ago" style={{ ...selStyle, width: "100%", marginTop: 4, marginBottom: 10 }} />
+            </label>
+            <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+              <label style={{ fontSize: 12, color: C.mute, fontWeight: 600, flex: 1 }}>Dia
+                <select value={nd.weekday} onChange={(e) => setNd((s) => ({ ...s, weekday: e.target.value }))} style={{ ...selStyle, width: "100%", marginTop: 4 }}>
+                  {["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"].map((w) => <option key={w}>{w}</option>)}
+                </select>
+              </label>
+              <label style={{ fontSize: 12, color: C.mute, fontWeight: 600, flex: 1 }}>Momento
+                <select value={nd.slot} onChange={(e) => setNd((s) => ({ ...s, slot: e.target.value }))} style={{ ...selStyle, width: "100%", marginTop: 4 }}>
+                  {["Manhã", "Almoço", "Tarde", "Jantar", "Noite"].map((sl) => <option key={sl}>{sl}</option>)}
+                </select>
+              </label>
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <Btn small full disabled={!nd.date.trim()} onClick={submitDate}><Plus size={15} /> Adicionar data</Btn>
+              <Btn small variant="ghost" onClick={() => setAdding(false)}>Cancelar</Btn>
+            </div>
+          </Card>
+        )}
       </div>
     </div>
   );
@@ -548,11 +645,12 @@ function ExploreScreen({ go, onSuggest, suggested, onAddCustom, livePlaces }) {
   };
 
   const chip = (label, active, onClick, key) => (
-    <span key={key || label} onClick={onClick} style={{
+    <button type="button" key={key || label} onClick={onClick} aria-pressed={active} style={{
       background: active ? C.wine : "#fff", color: active ? "#fff" : C.ink,
       border: `1px solid ${active ? C.wine : C.line}`, borderRadius: 999,
       padding: "7px 15px", fontSize: 13, whiteSpace: "nowrap", cursor: "pointer", fontWeight: 500,
-    }}>{label}</span>
+      fontFamily: "Archivo, sans-serif", flexShrink: 0,
+    }}>{label}</button>
   );
 
   return (
@@ -569,6 +667,7 @@ function ExploreScreen({ go, onSuggest, suggested, onAddCustom, livePlaces }) {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            aria-label="Buscar lugar por nome, bairro ou região"
             placeholder="Restaurante, bar, bairro… ex.: Leblon, pizza, rooftop"
             style={{
               flex: 1, border: "none", outline: "none", background: "transparent",
@@ -667,7 +766,7 @@ function ExploreScreen({ go, onSuggest, suggested, onAddCustom, livePlaces }) {
 }
 
 /* VOTAÇÃO DE LUGARES — com veto secreto e cutucada */
-function PlaceVoteScreen({ suggested = [], livePlaces = ALL_PLACES, myBallot = null, onConfirmVote }) {
+function PlaceVoteScreen({ suggested = [], livePlaces = ALL_PLACES, myBallot = null, onConfirmVote, onResetVote, showToast }) {
   const [myPicks, setMyPicks] = useState([]);
   const [myVeto, setMyVeto] = useState(null);
   const [nudgeOpen, setNudgeOpen] = useState(false);
@@ -750,8 +849,12 @@ function PlaceVoteScreen({ suggested = [], livePlaces = ALL_PLACES, myBallot = n
               {nudgeOpen && (
                 <div style={{ marginTop: 12, background: C.sand, border: `1px solid ${C.line}`, borderRadius: 12, padding: 12 }}>
                   <p style={{ fontSize: 13.5, color: C.ink, margin: "0 0 10px", lineHeight: 1.5, fontStyle: "italic" }}>{nudgeMsg}</p>
-                  <Btn small variant="ghost" onClick={() => setCopied(true)}>
-                    {copied ? <><Check size={14} /> Copiado — cola no grupo</> : <><Share2 size={14} /> Copiar mensagem</>}
+                  <Btn small variant="ghost" onClick={async () => {
+                    const m = await shareOrCopy(nudgeMsg);
+                    setCopied(true);
+                    if (showToast) showToast(m === "share" ? "Compartilhado!" : m === "copy" ? "Mensagem copiada — cola no grupo." : "Selecione o texto acima e copie.");
+                  }}>
+                    {copied ? <><Check size={14} /> Copiado — cola no grupo</> : <><Share2 size={14} /> Copiar / compartilhar</>}
                   </Btn>
                 </div>
               )}
@@ -791,7 +894,7 @@ function PlaceVoteScreen({ suggested = [], livePlaces = ALL_PLACES, myBallot = n
                     <AvatarStack ids={r.voters} size={22} />
                     {!meAlreadyVoted && (
                       <div style={{ display: "flex", gap: 6 }}>
-                        <button onClick={() => toggleVeto(r.place.id)} title="Vetar em sigilo" style={{
+                        <button onClick={() => toggleVeto(r.place.id)} title="Vetar em sigilo" aria-label={`Vetar ${r.place.name} em sigilo`} aria-pressed={r.place.id === myVeto} style={{
                           border: `1.5px solid ${C.line}`, background: "#fff", color: C.mute,
                           borderRadius: 10, padding: "5px 8px", cursor: "pointer", display: "grid", placeItems: "center",
                         }}>
@@ -845,8 +948,11 @@ function PlaceVoteScreen({ suggested = [], livePlaces = ALL_PLACES, myBallot = n
           </div>
         )}
         {myBallot && (
-          <div style={{ marginTop: 8, background: "#EAF0E4", borderRadius: 12, padding: "12px 14px", fontSize: 13.5, color: C.olive, fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}>
-            <Check size={16} /> Seu voto entrou — os pontos já contam no ranking.
+          <div style={{ marginTop: 8, background: "#EAF0E4", borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+            <span style={{ fontSize: 13.5, color: C.olive, fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}>
+              <Check size={16} /> Seu voto entrou — os pontos já contam.
+            </span>
+            <button type="button" onClick={() => onResetVote && onResetVote()} style={{ border: "none", background: "none", color: C.terra, fontSize: 13, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>Refazer</button>
           </div>
         )}
       </div>
@@ -855,9 +961,44 @@ function PlaceVoteScreen({ suggested = [], livePlaces = ALL_PLACES, myBallot = n
 }
 
 /* ENCONTRO CONFIRMADO */
-function ConfirmedScreen() {
-  const [going, setGoing] = useState(CONFIRMED.going.includes(ME));
+function ConfirmedScreen({ presence = null, onSetGoing, showToast }) {
   const p = CONFIRMED.place;
+  const baseGoing = CONFIRMED.going;
+  const going = presence === null ? baseGoing.includes(ME) : presence;
+  const goingIds = presence === false ? baseGoing.filter((id) => id !== ME)
+    : presence === true ? [...new Set([...baseGoing, ME])] : baseGoing;
+
+  const waMsg = `Encontro de Casais Sucesso Absoluto CONFIRMADO! 🥂 Dia ${CONFIRMED.date}, às ${CONFIRMED.time}, no ${p.name}. Endereço: ${CONFIRMED.address}.`;
+
+  const shareWhats = async () => {
+    const m = await shareOrCopy(waMsg);
+    if (showToast) showToast(m === "share" ? "Compartilhado!" : m === "copy" ? "Mensagem copiada — cola no grupo." : "Copie o texto do card abaixo.");
+  };
+  const openMap = async () => {
+    const url = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(CONFIRMED.address);
+    let w = null;
+    try { w = window.open(url, "_blank", "noopener"); } catch { /* bloqueado */ }
+    if (!w) { const m = await shareOrCopy(CONFIRMED.address); if (showToast) showToast(m === "copy" ? "Endereço copiado." : CONFIRMED.address); }
+  };
+  const addToCalendar = () => {
+    const ics = [
+      "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Sucesso Absoluto//PT-BR", "BEGIN:VEVENT",
+      "UID:" + Date.now() + "@sucesso-absoluto", "DTSTART:20250808T203000", "DTEND:20250808T230000",
+      "SUMMARY:" + CONFIRMED.name, "LOCATION:" + CONFIRMED.address.replace(/,/g, "\\,"),
+      "DESCRIPTION:" + ("Encontro no " + p.name).replace(/,/g, "\\,"), "END:VEVENT", "END:VCALENDAR",
+    ].join("\r\n");
+    try {
+      const blob = new Blob([ics], { type: "text/calendar" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url; a.download = "encontro.ics";
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      if (showToast) showToast("Arquivo .ics gerado — abra pra adicionar ao calendário.");
+    } catch {
+      shareOrCopy(`${CONFIRMED.name} · ${CONFIRMED.date} ${CONFIRMED.time}`);
+      if (showToast) showToast("Não deu pra baixar; detalhes copiados.");
+    }
+  };
 
   return (
     <div>
@@ -894,21 +1035,21 @@ function ConfirmedScreen() {
 
             <div style={{ marginBottom: 16 }}>
               <div style={{ fontSize: 13, color: C.mute, marginBottom: 8 }}>
-                {CONFIRMED.going.length} de 8 confirmados
+                {goingIds.length} de 8 confirmados
               </div>
-              <AvatarStack ids={CONFIRMED.going} size={30} />
+              <AvatarStack ids={goingIds} size={30} />
             </div>
 
             <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-              <Btn full variant={going ? "olive" : "ghost"} onClick={() => setGoing(true)}>
+              <Btn full variant={going ? "olive" : "ghost"} onClick={() => { onSetGoing(true); showToast && showToast("Presença confirmada!"); }}>
                 <Check size={16} /> {going ? "Você vai!" : "Confirmar presença"}
               </Btn>
-              <Btn variant="ghost" onClick={() => setGoing(false)}><X size={16} /></Btn>
+              <Btn variant="ghost" onClick={() => { onSetGoing(false); showToast && showToast("Presença cancelada."); }} aria-label="Não vou"><X size={16} /></Btn>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <Btn small full variant="ghost"><CalendarPlus size={15} /> Calendário</Btn>
-              <Btn small full variant="ghost"><MapPin size={15} /> Mapa</Btn>
-              <Btn small full variant="terra"><Share2 size={15} /> WhatsApp</Btn>
+              <Btn small full variant="ghost" onClick={addToCalendar}><CalendarPlus size={15} /> Calendário</Btn>
+              <Btn small full variant="ghost" onClick={openMap}><MapPin size={15} /> Mapa</Btn>
+              <Btn small full variant="terra" onClick={shareWhats}><Share2 size={15} /> WhatsApp</Btn>
             </div>
           </div>
         </Card>
@@ -1110,13 +1251,22 @@ function BurningPhoto({ src, alt }) {
 }
 
 /* MEMÓRIAS + MURAL DA VERGONHA */
-function MemoriesScreen() {
+function MemoriesScreen({ infractions = [], onDenounce, onRemoveInfraction }) {
   const stats = [
     { label: "Encontros", value: "12" },
     { label: "Gasto médio", value: "R$ 121" },
     { label: "Bairro top", value: "Botafogo" },
     { label: "Nota média", value: "4.7" },
   ];
+  const [reportOpen, setReportOpen] = useState(false);
+  const [rep, setRep] = useState({ place: "", culprits: "", detail: "" });
+  const inputStyle = { width: "100%", border: `1.5px solid ${C.line}`, borderRadius: 12, padding: "11px 12px", fontSize: 14, fontFamily: "Archivo, sans-serif", background: "#fff", color: C.ink, outline: "none" };
+  const submitReport = () => {
+    if (!rep.place.trim()) return;
+    onDenounce(rep);
+    setRep({ place: "", culprits: "", detail: "" });
+    setReportOpen(false);
+  };
 
   return (
     <div>
@@ -1157,11 +1307,43 @@ function MemoriesScreen() {
           <SectionTitle
             eyebrow="Lado B do histórico"
             title="Mural da Vergonha"
-            action={<Btn small variant="ghost"><Camera size={14} /> Denunciar</Btn>}
+            action={<Btn small variant="ghost" onClick={() => setReportOpen((o) => !o)}><Camera size={14} /> Denunciar</Btn>}
           />
           <p style={{ fontSize: 13, color: C.mute, margin: "-6px 0 14px", lineHeight: 1.4 }}>
             Tudo que aconteceu com menos de oito é, por definição, uma infração. Os traídos julgam.
           </p>
+
+          {reportOpen && (
+            <Card style={{ padding: 16, marginBottom: 14 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.wine, marginBottom: 10 }}>Registrar uma infração</div>
+              <label style={{ fontSize: 12, color: C.mute, fontWeight: 600 }}>Onde rolou? *
+                <input value={rep.place} onChange={(e) => setRep((s) => ({ ...s, place: e.target.value }))} placeholder="Ex.: Pizzaria da esquina" style={{ ...inputStyle, marginTop: 4, marginBottom: 10 }} />
+              </label>
+              <label style={{ fontSize: 12, color: C.mute, fontWeight: 600 }}>Quem estava?
+                <input value={rep.culprits} onChange={(e) => setRep((s) => ({ ...s, culprits: e.target.value }))} placeholder="Ex.: Luca e Mayara" style={{ ...inputStyle, marginTop: 4, marginBottom: 10 }} />
+              </label>
+              <label style={{ fontSize: 12, color: C.mute, fontWeight: 600 }}>O que aconteceu?
+                <input value={rep.detail} onChange={(e) => setRep((s) => ({ ...s, detail: e.target.value }))} placeholder="Conte a cena do crime" style={{ ...inputStyle, marginTop: 4, marginBottom: 12 }} />
+              </label>
+              <div style={{ display: "flex", gap: 8 }}>
+                <Btn small full disabled={!rep.place.trim()} onClick={submitReport}><Megaphone size={15} /> Publicar no Mural</Btn>
+                <Btn small variant="ghost" onClick={() => setReportOpen(false)}>Cancelar</Btn>
+              </div>
+            </Card>
+          )}
+
+          {infractions.map((inf) => (
+            <Card key={inf.id} style={{ marginBottom: 14, padding: 16, border: `1px solid ${C.scandalDeep}` }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                <span style={{ display: "inline-block", background: C.scandal, color: "#fff", fontSize: 10.5, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", padding: "3px 9px", borderRadius: 4 }}>Denúncia nova</span>
+                <button type="button" onClick={() => onRemoveInfraction(inf.id)} aria-label="Remover denúncia" style={{ border: "none", background: "none", color: C.mute, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Remover</button>
+              </div>
+              <div style={{ fontFamily: "Fraunces, serif", fontSize: 20, color: C.wine, fontWeight: 600, margin: "8px 0 2px" }}>Flagra no {inf.place}</div>
+              {inf.culprits && <div style={{ fontSize: 13, color: C.ink, marginBottom: 6 }}>Suspeitos: <b>{inf.culprits}</b></div>}
+              {inf.detail && <p style={{ fontSize: 13.5, color: C.mute, margin: 0, lineHeight: 1.5, fontStyle: "italic" }}>"{inf.detail}"</p>}
+              <div style={{ fontSize: 11, color: C.mute, marginTop: 8 }}>Denunciado por {person(inf.by)?.name || "alguém"} · aguardando julgamento dos traídos.</div>
+            </Card>
+          ))}
 
           {INFRACTIONS.map((inf) => {
             const condemned = inf.verdict === "condenados";
@@ -1296,7 +1478,7 @@ function ProfilesScreen() {
 }
 
 /* CRIAR ENCONTRO */
-function CreateScreen({ go }) {
+function CreateScreen({ go, onCreate }) {
   const [name, setName] = useState("");
   const [desc, setDesc] = useState("");
   const [period, setPeriod] = useState("Agosto");
@@ -1317,12 +1499,13 @@ function CreateScreen({ go }) {
   const ready = name.trim().length > 0 && type && price;
 
   const Chip = ({ label, active, onClick }) => (
-    <span onClick={onClick} style={{
+    <button type="button" onClick={onClick} aria-pressed={active} style={{
       background: active ? C.wine : "#fff", color: active ? "#fff" : C.ink,
       border: `1.5px solid ${active ? C.wine : C.line}`, borderRadius: 999,
       padding: "8px 15px", fontSize: 13, cursor: "pointer", fontWeight: 600,
       whiteSpace: "nowrap", transition: "all .15s", userSelect: "none",
-    }}>{label}</span>
+      fontFamily: "Archivo, sans-serif",
+    }}>{label}</button>
   );
 
   const Field = ({ label, children, hint }) => (
@@ -1406,7 +1589,7 @@ function CreateScreen({ go }) {
           </div>
         </Field>
 
-        <Btn full disabled={!ready} onClick={() => setDone(true)}>
+        <Btn full disabled={!ready} onClick={() => { onCreate && onCreate({ name: name.trim(), desc: desc.trim(), type, price, regions, period, deadline }); setDone(true); }}>
           <Sparkles size={18} /> {ready ? "Abrir votação de datas" : "Preencha nome, tipo e preço"}
         </Btn>
       </div>
@@ -1446,20 +1629,24 @@ function LoginScreen({ onLogin }) {
       {!sel ? (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           {PEOPLE.map((p) => (
-            <Card key={p.id} style={{ padding: 14, textAlign: "center", cursor: "pointer" }}>
-              <div onClick={() => { setSel(p.id); setErr(false); }}>
-                <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}><Avatar id={p.id} size={48} /></div>
-                <div style={{ fontWeight: 700, color: C.ink, fontSize: 13.5 }}>{p.name}</div>
-              </div>
-            </Card>
+            <button type="button" key={p.id} onClick={() => { setSel(p.id); setErr(false); }}
+              aria-label={`Entrar como ${p.name}`}
+              style={{
+                background: C.cream, borderRadius: 20, border: `1px solid ${C.line}`, boxShadow: SH.card,
+                padding: 14, textAlign: "center", cursor: "pointer", fontFamily: "Archivo, sans-serif",
+              }}>
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}><Avatar id={p.id} size={48} /></div>
+              <div style={{ fontWeight: 700, color: C.ink, fontSize: 13.5 }}>{p.name}</div>
+            </button>
           ))}
         </div>
       ) : (
         <Card style={{ padding: 22, textAlign: "center" }}>
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 10 }}><Avatar id={sel} size={56} /></div>
-          <div style={{ fontFamily: "Fraunces, serif", fontSize: 20, color: C.wine, fontWeight: 600, marginBottom: 14 }}>Oi, {person(sel).name}!</div>
+          <label htmlFor="pin-input" style={{ fontFamily: "Fraunces, serif", fontSize: 20, color: C.wine, fontWeight: 600, marginBottom: 14, display: "block" }}>Oi, {person(sel).name}!</label>
           <input
-            type="password" inputMode="numeric" maxLength={4} placeholder="••••"
+            id="pin-input" type="password" inputMode="numeric" maxLength={4} placeholder="••••"
+            aria-label={`Código de 4 dígitos de ${person(sel).name}`} aria-invalid={err}
             value={pin} autoFocus
             onChange={(e) => { setPin(e.target.value.replace(/\D/g, "")); setErr(false); }}
             onKeyDown={(e) => e.key === "Enter" && pin.length === 4 && tryEnter()}
@@ -1496,57 +1683,97 @@ const TABS = [
 ];
 
 export default function App() {
+  const saved = React.useMemo(() => store.read(), []);
   const [tab, setTab] = useState("home");
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(saved.me || null); // id da pessoa logada (persistido)
 
-  /* estado compartilhado — dá coerência ao fluxo buscar → sugerir → votar */
-  const [suggested, setSuggested] = useState([]);   // ids de lugares sugeridos ao grupo
-  const [customPlaces, setCustomPlaces] = useState([]); // lugares criados por você
-  const [myBallot, setMyBallot] = useState(null);   // { picks:[ids], veto } do meu voto
+  /* estado compartilhado e PERSISTIDO — sobrevive ao refresh */
+  const [suggested, setSuggested] = useState(saved.suggested || []);       // ids sugeridos ao grupo
+  const [customPlaces, setCustomPlaces] = useState(saved.customPlaces || []); // lugares criados por você
+  const [myBallot, setMyBallot] = useState(saved.myBallot || null);        // { picks:[ids], veto }
+  const [dateVotes, setDateVotes] = useState(saved.dateVotes || {});       // { [dateId]: "can"|"maybe"|"no" }
+  const [customDates, setCustomDates] = useState(saved.customDates || []); // datas sugeridas por você
+  const [presence, setPresence] = useState(saved.presence ?? null);        // true/false/null p/ encontro confirmado
+  const [encontros, setEncontros] = useState(saved.encontros || []);       // encontros criados
+  const [infractions, setInfractions] = useState(saved.infractions || []); // denúncias no Mural
   const [toast, setToast] = useState(null);
-  const nextId = React.useRef(1000);
+  const nextId = React.useRef(saved.nextId || 1000);
+
+  // mantém o "ME" (usado pelas telas) em sincronia com a sessão persistida
+  if (user) ME = user;
 
   const livePlaces = useMemo(() => [...ALL_PLACES, ...customPlaces], [customPlaces]);
+
+  // grava tudo que muda (best-effort; ignora se o storage estiver bloqueado)
+  React.useEffect(() => {
+    store.write({ me: user, suggested, customPlaces, myBallot, dateVotes, customDates, presence, encontros, infractions, nextId: nextId.current });
+  }, [user, suggested, customPlaces, myBallot, dateVotes, customDates, presence, encontros, infractions]);
 
   const showToast = (msg) => { setToast(msg); };
   React.useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => setToast(null), 2600);
+    const t = setTimeout(() => setToast(null), 2800);
     return () => clearTimeout(t);
   }, [toast]);
 
   const go = (t) => { setTab(t); window.scrollTo(0, 0); };
-  const logout = () => { setUser(null); setTab("home"); setSuggested([]); setCustomPlaces([]); setMyBallot(null); };
+  // sair encerra a sessão mas PRESERVA os dados do grupo (nada é perdido)
+  const logout = () => { setUser(null); setTab("home"); };
 
   const suggestPlace = (p) => {
-    setSuggested((s) => (s.includes(p.id) ? s : [...s, p.id]));
+    if (suggested.includes(p.id)) { showToast(`"${p.name}" já está no ranking.`); return; }
+    setSuggested((s) => [...s, p.id]);
     showToast(`"${p.name}" entrou no ranking da votação.`);
   };
   const addCustom = ({ name, region }) => {
+    const clean = name.trim();
+    // evita duplicidade: se já existe um lugar com o mesmo nome, apenas sugere o existente
+    const existing = livePlaces.find((p) => norm(p.name) === norm(clean));
+    if (existing) { suggestPlace(existing); go("placevote"); return; }
     const id = ++nextId.current;
     const place = {
-      id, name, cat: "Sugestão", hood: region, price: 2, rating: 4.5,
+      id, name: clean, cat: "Sugestão", hood: region, price: 2, rating: 4.5,
       img: "linear-gradient(140deg,#123B3A,#A9834A)", desc: "Adicionado por você para o grupo votar.",
       tags: ["Novo", region], dist: "", custom: true,
     };
     setCustomPlaces((s) => [...s, place]);
     setSuggested((s) => [...s, id]);
-    showToast(`"${name}" criado e sugerido ao grupo.`);
+    showToast(`"${clean}" criado e sugerido ao grupo.`);
   };
   const confirmVote = ({ picks, veto }) => {
     setMyBallot({ picks, veto });
-    showToast("Voto registrado — obrigado!");
+    showToast("Voto registrado — os pontos já contam.");
   };
+  const resetVote = () => { setMyBallot(null); showToast("Voto desfeito — pode escolher de novo."); };
+  const voteDate = (dateId, val) => setDateVotes((s) => ({ ...s, [dateId]: s[dateId] === val ? null : val }));
+  const addDate = (d) => {
+    const id = "cd" + (++nextId.current);
+    setCustomDates((s) => [...s, { id, date: d.date, weekday: d.weekday, slot: d.slot, can: [], maybe: [], no: [], custom: true }]);
+    setDateVotes((s) => ({ ...s, [id]: "can" }));
+    showToast(`Data "${d.date}" sugerida ao grupo.`);
+  };
+  const createEncontro = (data) => {
+    const id = "e" + (++nextId.current);
+    setEncontros((s) => [{ id, ...data, createdBy: user, votes: 1 }, ...s]);
+    showToast("Encontro criado — votação de datas aberta.");
+  };
+  const setGoing = (v) => setPresence(v);
+  const addInfraction = ({ place, culprits, detail }) => {
+    const id = "inf" + (++nextId.current);
+    setInfractions((s) => [{ id, place: place.trim(), culprits: culprits.trim(), detail: detail.trim(), by: user }, ...s]);
+    showToast("Denúncia registrada no Mural.");
+  };
+  const removeInfraction = (id) => { setInfractions((s) => s.filter((x) => x.id !== id)); showToast("Denúncia removida."); };
 
   const screens = {
-    home: <HomeScreen go={go} />,
-    calendar: <CalendarScreen />,
+    home: <HomeScreen go={go} encontros={encontros} dateVotes={dateVotes} customDates={customDates} />,
+    calendar: <CalendarScreen dateVotes={dateVotes} onVote={voteDate} customDates={customDates} onAddDate={addDate} />,
     explore: <ExploreScreen go={go} onSuggest={suggestPlace} suggested={suggested} onAddCustom={addCustom} livePlaces={livePlaces} />,
-    placevote: <PlaceVoteScreen suggested={suggested} livePlaces={livePlaces} myBallot={myBallot} onConfirmVote={confirmVote} />,
-    confirmed: <ConfirmedScreen />,
-    memories: <MemoriesScreen />,
+    placevote: <PlaceVoteScreen suggested={suggested} livePlaces={livePlaces} myBallot={myBallot} onConfirmVote={confirmVote} onResetVote={resetVote} showToast={showToast} />,
+    confirmed: <ConfirmedScreen presence={presence} onSetGoing={setGoing} showToast={showToast} />,
+    memories: <MemoriesScreen infractions={infractions} onDenounce={addInfraction} onRemoveInfraction={removeInfraction} />,
     profiles: <ProfilesScreen />,
-    create: <CreateScreen go={go} />,
+    create: <CreateScreen go={go} onCreate={createEncontro} />,
   };
 
   const showBack = tab === "confirmed" || tab === "profiles" || tab === "create";
@@ -1609,7 +1836,7 @@ export default function App() {
           <div style={{ padding: "0 20px 20px", display: "flex", gap: 10 }}>
             <Btn full variant="ghost" onClick={() => go("confirmed")}><Check size={16} /> Ver exemplo confirmado</Btn>
             <Btn full variant="ghost" onClick={() => go("profiles")}><Users size={16} /> O grupo</Btn>
-            <Btn variant="ghost" onClick={logout}><LogOut size={16} /></Btn>
+            <Btn variant="ghost" onClick={logout} aria-label="Sair"><LogOut size={16} /></Btn>
           </div>
         )}
 
@@ -1637,10 +1864,11 @@ export default function App() {
             const active = tab === t.id;
             const Icon = t.icon;
             return (
-              <button key={t.id} onClick={() => go(t.id)} style={{
+              <button key={t.id} onClick={() => go(t.id)}
+                aria-current={active ? "page" : undefined} aria-label={t.label} style={{
                 background: "none", border: "none", cursor: "pointer",
                 display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
-                color: active ? C.wine : C.mute, flex: 1, padding: 0,
+                color: active ? C.wine : C.mute, flex: 1, padding: "4px 0", minHeight: 44,
               }}>
                 <div style={{ background: active ? "rgba(92,26,43,.10)" : "transparent", borderRadius: 12, padding: "5px 14px", transition: "background .2s ease" }}>
                   <Icon size={21} strokeWidth={active ? 2.4 : 2} />
