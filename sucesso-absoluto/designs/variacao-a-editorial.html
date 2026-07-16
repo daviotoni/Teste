@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Editorial Riviera — Sucesso Absoluto</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     EDITORIAL RIVIERA — variação de design A
+     Revista de viagem de luxo → app. Fraunces + Archivo,
+     papel marfim, ouro-foil, marinho-petróleo, vermelho-escândalo.
+     ============================================================ */
+
+  :root{
+    --paper:#EFE9DC;
+    --paper-raise:#F6F2E9;
+    --surface:#E3DAC7;          /* mesa / fundo da revista */
+    --ink:#211B14;
+    --ink-soft:#5B5344;
+    --ink-faint:#8C8474;
+    --line:rgba(33,27,20,.16);
+    --line-strong:rgba(33,27,20,.30);
+    --gold:#A9834A;
+    --gold-lite:#CBA867;
+    --gold-deep:#7E5F31;
+    --marine:#123B3A;
+    --marine-lite:#2C5F5B;
+    --scandal:#C0301C;
+    --scandal-deep:#7E1C10;
+    --shadow:38px 60px 90px -60px rgba(33,27,20,.60), 0 2px 0 rgba(255,255,255,.4) inset;
+    --foil:linear-gradient(115deg,#7E5F31 0%,#CBA867 34%,#F0DFAE 50%,#B5904F 68%,#8A6B39 100%);
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --paper:#181310;
+      --paper-raise:#221B15;
+      --surface:#0C0906;
+      --ink:#EDE6D6;
+      --ink-soft:#B6AB96;
+      --ink-faint:#867C69;
+      --line:rgba(237,230,214,.15);
+      --line-strong:rgba(237,230,214,.28);
+      --gold:#C9A867;
+      --gold-lite:#E5CC8E;
+      --gold-deep:#9C7A3E;
+      --marine:#7FC3B8;
+      --marine-lite:#A7D8CE;
+      --scandal:#E8503A;
+      --scandal-deep:#B22E1A;
+      --shadow:38px 64px 100px -60px rgba(0,0,0,.85), 0 0 0 1px rgba(237,230,214,.05) inset;
+    }
+  }
+  :root[data-theme="light"]{
+    --paper:#EFE9DC;--paper-raise:#F6F2E9;--surface:#E3DAC7;--ink:#211B14;--ink-soft:#5B5344;--ink-faint:#8C8474;
+    --line:rgba(33,27,20,.16);--line-strong:rgba(33,27,20,.30);--gold:#A9834A;--gold-lite:#CBA867;--gold-deep:#7E5F31;
+    --marine:#123B3A;--marine-lite:#2C5F5B;--scandal:#C0301C;--scandal-deep:#7E1C10;
+    --shadow:38px 60px 90px -60px rgba(33,27,20,.60), 0 2px 0 rgba(255,255,255,.4) inset;
+  }
+  :root[data-theme="dark"]{
+    --paper:#181310;--paper-raise:#221B15;--surface:#0C0906;--ink:#EDE6D6;--ink-soft:#B6AB96;--ink-faint:#867C69;
+    --line:rgba(237,230,214,.15);--line-strong:rgba(237,230,214,.28);--gold:#C9A867;--gold-lite:#E5CC8E;--gold-deep:#9C7A3E;
+    --marine:#7FC3B8;--marine-lite:#A7D8CE;--scandal:#E8503A;--scandal-deep:#B22E1A;
+    --shadow:38px 64px 100px -60px rgba(0,0,0,.85), 0 0 0 1px rgba(237,230,214,.05) inset;
+  }
+
+  *{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(120% 80% at 50% -10%, color-mix(in srgb, var(--gold) 12%, var(--surface)) 0%, var(--surface) 55%),
+      var(--surface);
+    color:var(--ink);
+    font-family:"Archivo",system-ui,sans-serif;
+    line-height:1.5;
+    overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  .serif{font-family:"Fraunces","Times New Roman",serif;font-optical-sizing:auto;}
+  .kicker{
+    font-family:"Archivo",sans-serif;
+    text-transform:uppercase;
+    letter-spacing:.32em;
+    font-weight:600;
+    font-size:10px;
+    color:var(--gold-deep);
+  }
+  @media (prefers-color-scheme:dark){.kicker{color:var(--gold);}}
+  :root[data-theme="dark"] .kicker{color:var(--gold);}
+  :root[data-theme="light"] .kicker{color:var(--gold-deep);}
+
+  /* ---------- page shell ---------- */
+  .wrap{max-width:1180px;margin:0 auto;padding:clamp(28px,5vw,72px) clamp(16px,4vw,48px) 80px;}
+
+  /* masthead */
+  .masthead{text-align:center;position:relative;padding-bottom:34px;margin-bottom:14px;}
+  .masthead .rule-top{display:flex;align-items:center;justify-content:center;gap:16px;color:var(--ink-soft);
+    font-size:9.5px;letter-spacing:.34em;text-transform:uppercase;font-weight:600;margin-bottom:22px;flex-wrap:wrap;}
+  .masthead .rule-top span{white-space:nowrap;}
+  .dot{width:4px;height:4px;border-radius:50%;background:var(--gold);display:inline-block;}
+  .masthead h1{
+    font-weight:600;margin:0;line-height:.86;letter-spacing:-.02em;
+    font-size:clamp(44px,11vw,132px);
+    color:var(--ink);text-wrap:balance;
+  }
+  .masthead h1 em{font-style:italic;font-weight:340;color:var(--marine);}
+  @media (prefers-color-scheme:dark){.masthead h1 em{color:var(--marine);}}
+  .masthead .sub{
+    margin:20px auto 0;max-width:640px;color:var(--ink-soft);
+    font-size:clamp(13px,1.6vw,15px);line-height:1.7;text-wrap:balance;
+  }
+  .foil-bar{height:2px;width:min(560px,86%);margin:26px auto 0;background:var(--foil);border-radius:2px;
+    background-size:200% 100%;}
+
+  /* gallery grid of screens */
+  .gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:clamp(34px,5vw,64px);
+    margin-top:56px;align-items:start;justify-items:center;}
+
+  .plate{width:100%;max-width:440px;}
+  .folio{display:flex;align-items:baseline;gap:14px;margin:0 4px 18px;padding-bottom:12px;
+    border-bottom:1px solid var(--line);}
+  .folio .no{font-family:"Fraunces",serif;font-size:30px;font-weight:340;font-style:italic;color:var(--gold);line-height:1;}
+  .folio .name{font-family:"Fraunces",serif;font-size:19px;font-weight:560;letter-spacing:-.01em;color:var(--ink);}
+  .folio .cap{margin-left:auto;text-align:right;color:var(--ink-faint);font-size:10.5px;letter-spacing:.14em;
+    text-transform:uppercase;max-width:150px;line-height:1.5;}
+
+  /* ---------- phone frame ---------- */
+  .phone{
+    position:relative;border-radius:44px;padding:11px;
+    background:linear-gradient(160deg, color-mix(in srgb,var(--ink) 88%, #000) , color-mix(in srgb,var(--ink) 70%, #3a2f22));
+    box-shadow:var(--shadow);
+  }
+  .phone::after{content:"";position:absolute;inset:5px;border-radius:40px;pointer-events:none;
+    border:1px solid rgba(203,168,103,.28);}
+  .screen{
+    position:relative;border-radius:34px;overflow:hidden;background:var(--paper);
+    height:820px;display:flex;flex-direction:column;
+  }
+  .notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:120px;height:26px;
+    background:color-mix(in srgb,var(--ink) 82%, #000);border-radius:0 0 16px 16px;z-index:40;}
+  .notch::after{content:"";position:absolute;top:9px;left:50%;transform:translateX(-50%);width:44px;height:4px;
+    border-radius:3px;background:rgba(203,168,103,.4);}
+  .statusbar{display:flex;justify-content:space-between;align-items:center;padding:14px 26px 0;
+    font-size:11px;font-weight:600;color:var(--ink);letter-spacing:.02em;flex-shrink:0;z-index:5;}
+  .statusbar .r{display:flex;gap:6px;align-items:center;}
+  .scroll{flex:1;overflow:hidden;position:relative;}
+  .pad{padding:16px 24px 30px;}
+
+  /* editorial primitives inside screens */
+  .eyebrow{display:flex;align-items:center;gap:9px;}
+  .eyebrow .ln{height:1px;flex:1;background:var(--line);}
+  .display{font-family:"Fraunces",serif;font-optical-sizing:auto;color:var(--ink);
+    font-weight:560;letter-spacing:-.025em;line-height:.94;text-wrap:balance;}
+  .lede{color:var(--ink-soft);font-size:13px;line-height:1.55;}
+  .hairline{height:1px;background:var(--line);border:0;margin:0;}
+
+  /* gauge — o "medidor de oito" reinterpretado */
+  .gauge{display:flex;align-items:flex-end;gap:18px;}
+  .gauge .frac{font-family:"Fraunces",serif;font-weight:300;line-height:.8;letter-spacing:-.03em;color:var(--ink);
+    font-size:70px;font-variant-numeric:tabular-nums;}
+  .gauge .frac sup{font-size:.42em;font-style:italic;color:var(--gold);vertical-align:.9em;font-weight:340;}
+  .gauge .meta{padding-bottom:9px;}
+  .strokes{display:flex;gap:7px;align-items:flex-end;height:40px;margin-bottom:8px;}
+  .strokes i{width:3px;height:100%;background:var(--line-strong);border-radius:2px;display:block;
+    transform-origin:bottom;}
+  .strokes i.on{background:var(--foil);box-shadow:0 0 10px -3px var(--gold);height:100%;}
+  .strokes i.me{background:var(--marine);height:118%;box-shadow:0 0 0 2px color-mix(in srgb,var(--marine) 22%, transparent);}
+  @keyframes rise{from{transform:scaleY(.12);opacity:0;}to{transform:scaleY(1);opacity:1;}}
+  .anim .strokes i{animation:rise .6s cubic-bezier(.2,.8,.2,1) both;}
+  .anim .strokes i:nth-child(1){animation-delay:.05s}.anim .strokes i:nth-child(2){animation-delay:.11s}
+  .anim .strokes i:nth-child(3){animation-delay:.17s}.anim .strokes i:nth-child(4){animation-delay:.23s}
+  .anim .strokes i:nth-child(5){animation-delay:.29s}.anim .strokes i:nth-child(6){animation-delay:.35s}
+  .anim .strokes i:nth-child(7){animation-delay:.41s}.anim .strokes i:nth-child(8){animation-delay:.47s}
+
+  /* index / steps */
+  .index{list-style:none;margin:0;padding:0;}
+  .index li{display:flex;align-items:baseline;gap:14px;padding:11px 0;border-top:1px solid var(--line);}
+  .index li .n{font-family:"Fraunces",serif;font-style:italic;font-size:14px;color:var(--gold);width:26px;flex-shrink:0;
+    font-variant-numeric:tabular-nums;}
+  .index li .t{font-family:"Fraunces",serif;font-size:16px;color:var(--ink);font-weight:500;}
+  .index li.done .t{color:var(--ink-faint);}
+  .index li.now{border-top-color:var(--marine);}
+  .index li.now .t{color:var(--marine);font-style:italic;}
+  .index li .tag{margin-left:auto;font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-faint);
+    font-weight:600;align-self:center;}
+  .index li.now .tag{color:var(--marine);}
+
+  .btn{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;padding:15px;border:0;cursor:pointer;
+    font-family:"Archivo",sans-serif;font-weight:600;font-size:12px;letter-spacing:.16em;text-transform:uppercase;
+    background:var(--ink);color:var(--paper);border-radius:2px;}
+  .btn.gold{background:var(--foil);color:#2A2012;}
+  .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line-strong);}
+
+  .quote{font-family:"Fraunces",serif;font-style:italic;font-weight:340;color:var(--ink);line-height:1.28;
+    letter-spacing:-.01em;font-size:21px;text-wrap:balance;}
+  .quote b{color:var(--marine);font-weight:560;font-style:normal;}
+
+  /* login masthead-of-contributors */
+  .contrib{display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:1px solid var(--line-strong);}
+  .contrib button{all:unset;cursor:pointer;padding:12px 10px;border-bottom:1px solid var(--line);
+    border-right:1px solid var(--line);display:flex;flex-direction:column;gap:2px;}
+  .contrib button:nth-child(2n){border-right:0;}
+  .contrib button.sel{background:color-mix(in srgb,var(--marine) 12%, var(--paper));}
+  .contrib .nm{font-family:"Fraunces",serif;font-size:16px;font-weight:560;color:var(--ink);letter-spacing:-.01em;}
+  .contrib button.sel .nm{color:var(--marine);}
+  .contrib .cp{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-faint);font-weight:600;}
+  .pins{display:flex;gap:9px;}
+  .pins .p{flex:1;height:52px;border:1px solid var(--line-strong);border-radius:2px;display:flex;
+    align-items:center;justify-content:center;font-family:"Fraunces",serif;font-size:22px;color:var(--ink);}
+  .pins .p.f{border-color:var(--marine);color:var(--marine);}
+
+  /* place listing cards */
+  .listing{padding:16px 0;border-top:1px solid var(--line);display:grid;grid-template-columns:74px 1fr;gap:14px;}
+  .listing .photo{width:74px;height:92px;border-radius:2px;position:relative;box-shadow:0 0 0 1px var(--line) inset;}
+  .listing .photo::after{content:"";position:absolute;inset:0;box-shadow:0 0 0 3px var(--paper) inset,0 0 0 4px var(--gold) inset;opacity:.0;}
+  .listing .rk{position:absolute;top:-9px;left:-9px;width:26px;height:26px;background:var(--paper);
+    border:1px solid var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-family:"Fraunces",serif;font-style:italic;font-size:13px;color:var(--gold-deep);}
+  :root[data-theme="dark"] .listing .rk{color:var(--gold);}
+  @media (prefers-color-scheme:dark){.listing .rk{color:var(--gold);}}
+  .listing h4{font-family:"Fraunces",serif;font-size:18px;font-weight:560;margin:0;color:var(--ink);letter-spacing:-.01em;line-height:1.05;}
+  .listing .meta{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint);font-weight:600;margin:4px 0 6px;}
+  .listing .d{font-size:12px;color:var(--ink-soft);line-height:1.45;margin:0 0 9px;}
+  .ballot{display:flex;gap:7px;}
+  .ballot b{font-family:"Archivo";font-weight:600;font-size:11px;letter-spacing:.08em;padding:6px 0;flex:1;text-align:center;
+    border:1px solid var(--line-strong);border-radius:2px;color:var(--ink-soft);text-transform:uppercase;}
+  .ballot b.on{background:var(--foil);border-color:transparent;color:#2A2012;}
+  .data{display:flex;gap:10px;align-items:center;font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--ink-faint);font-weight:600;}
+  .data .g{color:var(--gold-deep);}
+  @media (prefers-color-scheme:dark){.data .g{color:var(--gold);}}
+
+  /* confidential veto band */
+  .confidential{margin-top:20px;border:1px solid var(--line-strong);border-radius:2px;padding:16px;
+    background:repeating-linear-gradient(45deg,transparent,transparent 9px,color-mix(in srgb,var(--ink) 4%,transparent) 9px,color-mix(in srgb,var(--ink) 4%,transparent) 10px);}
+  .confidential .h{display:flex;align-items:center;gap:8px;}
+  .seal{font-family:"Archivo";font-size:9px;letter-spacing:.28em;text-transform:uppercase;font-weight:700;
+    color:var(--scandal);border:1px solid var(--scandal);padding:3px 8px;border-radius:2px;}
+
+  /* ---------- MURAL DA VERGONHA — scandal spread ---------- */
+  .scandal-screen{background:#14100C;}
+  :root[data-theme="light"] .scandal-screen{background:#14100C;}
+  .scandal-screen .statusbar{color:#EDE6D6;}
+  .scandal-hd{padding:22px 24px 18px;position:relative;background:
+    radial-gradient(140% 120% at 20% 0%, rgba(192,48,28,.24), transparent 60%);}
+  .scandal-hd .kk{color:var(--scandal);letter-spacing:.34em;font-size:9.5px;font-weight:700;text-transform:uppercase;}
+  .scandal-hd h2{font-family:"Fraunces",serif;color:#F3ECDD;font-weight:600;font-size:46px;line-height:.86;
+    margin:12px 0 0;letter-spacing:-.02em;text-wrap:balance;}
+  .scandal-hd h2 em{font-style:italic;color:var(--scandal);font-weight:340;}
+  .scandal-hd p{color:#B9AE9A;font-size:12px;line-height:1.5;margin:12px 0 0;max-width:320px;}
+  .scandal-body{background:#14100C;padding:6px 24px 30px;color:#EDE6D6;}
+
+  .case{border-top:1px solid rgba(237,230,214,.14);padding:22px 0;}
+  .burn{position:relative;height:150px;border-radius:2px;overflow:hidden;margin-bottom:16px;
+    box-shadow:0 0 0 1px rgba(237,230,214,.12);}
+  .burn .img{position:absolute;inset:0;filter:sepia(.5) contrast(1.05);}
+  .burn .char{position:absolute;inset:0;background:
+    radial-gradient(80% 60% at 50% 120%, rgba(255,150,40,.7), transparent 55%),
+    linear-gradient(0deg, #1a0d05 0%, rgba(26,13,5,.65) 22%, transparent 46%);
+    mix-blend-mode:multiply;}
+  .burn .ember{position:absolute;left:0;right:0;bottom:26%;height:20px;
+    background:linear-gradient(0deg, rgba(255,90,20,0), rgba(255,150,40,.9) 40%, rgba(255,220,120,1) 55%, rgba(255,120,30,.6) 70%, transparent);
+    filter:blur(2px);mix-blend-mode:screen;}
+  .anim .burn .ember{animation:flick 2.6s ease-in-out infinite alternate;}
+  @keyframes flick{0%{opacity:.6;transform:translateY(0) scaleX(1)}50%{opacity:1;transform:translateY(-2px) scaleX(1.02)}100%{opacity:.5;transform:translateY(1px) scaleX(.99)}}
+  .burn .stamp{position:absolute;top:12px;right:12px;transform:rotate(-9deg);
+    font-family:"Archivo";font-weight:700;font-size:12px;letter-spacing:.22em;color:#F3ECDD;
+    border:2px solid var(--scandal);padding:5px 10px;border-radius:3px;background:rgba(192,48,28,.22);text-transform:uppercase;}
+  .burn .cap{position:absolute;left:12px;bottom:10px;font-family:"Fraunces",serif;font-style:italic;
+    color:#F3ECDD;font-size:13px;text-shadow:0 1px 6px #000;z-index:2;}
+  .burn .badge-proof{position:absolute;left:12px;bottom:34px;z-index:2;font-family:"Archivo";font-size:8.5px;
+    letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:#F3ECDD;background:rgba(192,48,28,.85);
+    padding:3px 7px;border-radius:2px;}
+
+  .sev{display:inline-block;font-family:"Archivo";font-size:9px;letter-spacing:.24em;text-transform:uppercase;
+    font-weight:700;color:#F3ECDD;background:var(--scandal);padding:4px 10px;border-radius:2px;}
+  .metaline{font-size:11px;letter-spacing:.04em;color:#9C9179;font-weight:500;}
+  .scandal-strokes i{width:100%;}
+  .scandal-strokes i.guilty{background:linear-gradient(0deg,var(--scandal-deep),var(--scandal));
+    box-shadow:0 0 12px -3px var(--scandal);height:118%;}
+  .scandal-strokes i.off{background:rgba(237,230,214,.2);}
+  .defense{border-left:2px solid var(--scandal);padding:2px 0 2px 14px;margin:0 0 14px;}
+  .defense .dl{font-family:"Archivo";font-size:9px;letter-spacing:.22em;text-transform:uppercase;font-weight:700;color:var(--scandal);}
+  .defense .dq{font-style:italic;font-size:19px;color:#F3ECDD;line-height:1.25;margin:6px 0 0;font-weight:340;}
+  .subnote{font-size:10.5px;letter-spacing:.04em;color:#9C9179;font-style:italic;margin:10px 0 0;text-align:right;font-family:"Fraunces",serif;}
+
+  .placar{border-top:1px solid rgba(237,230,214,.14);padding:22px 0 4px;}
+  .prow{display:flex;align-items:baseline;justify-content:space-between;gap:14px;padding:11px 0;
+    border-bottom:1px solid rgba(237,230,214,.1);}
+  .prow .nm{font-size:15px;color:#F3ECDD;font-weight:560;letter-spacing:-.01em;line-height:1.15;}
+  .prow .nm.clean{color:#8B8069;}
+  .prow .ct{flex-shrink:0;font-family:"Archivo";font-size:9px;letter-spacing:.16em;text-transform:uppercase;
+    font-weight:700;color:var(--scandal);}
+  .prow .ct.clean{color:#6E6552;}
+  .pfoot{font-family:"Fraunces",serif;font-style:italic;font-size:13px;color:#9C9179;margin:16px 0 0;line-height:1.4;}
+
+  .case .kk{color:var(--scandal);letter-spacing:.24em;font-size:9px;font-weight:700;text-transform:uppercase;}
+  .case h3{font-family:"Fraunces",serif;color:#F3ECDD;font-size:23px;font-weight:560;margin:8px 0 6px;
+    letter-spacing:-.01em;line-height:1.05;}
+  .case .body{color:#C4B9A5;font-size:12.5px;line-height:1.55;margin:0 0 16px;}
+
+  .verdict{border:1px solid rgba(237,230,214,.16);border-radius:2px;overflow:hidden;}
+  .verdict .row{display:grid;grid-template-columns:96px 1fr;border-top:1px solid rgba(237,230,214,.12);}
+  .verdict .row:first-child{border-top:0;}
+  .verdict .k{padding:11px 12px;font-size:9px;letter-spacing:.2em;text-transform:uppercase;font-weight:700;
+    color:var(--scandal);background:rgba(192,48,28,.08);border-right:1px solid rgba(237,230,214,.12);align-self:stretch;
+    display:flex;align-items:center;}
+  .verdict .v{padding:11px 13px;color:#EDE6D6;font-size:12.5px;line-height:1.4;display:flex;align-items:center;}
+  .verdict .v.g{font-family:"Fraunces",serif;font-style:italic;font-size:17px;color:#F3ECDD;}
+  .votes{display:flex;gap:5px;}
+  .votes i{width:14px;height:14px;border-radius:50%;display:block;}
+  .votes i.y{background:var(--scandal);}
+  .votes i.n{background:transparent;border:1px solid rgba(237,230,214,.3);}
+
+  footer.colophon{margin-top:72px;padding-top:26px;border-top:1px solid var(--line);text-align:center;
+    color:var(--ink-faint);font-size:10px;letter-spacing:.22em;text-transform:uppercase;font-weight:600;line-height:2;}
+  .colophon .foil-word{background:var(--foil);-webkit-background-clip:text;background-clip:text;color:transparent;}
+
+  @media (max-width:520px){
+    .screen{height:760px;}
+    .folio .cap{display:none;}
+    .masthead h1{font-size:clamp(40px,15vw,80px);}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none!important;}
+  }
+</style>
+
+<div class="wrap">
+
+  <!-- ============ MASTHEAD ============ -->
+  <header class="masthead">
+    <div class="rule-top">
+      <span>Edição Rio de Janeiro</span><i class="dot"></i>
+      <span>Quatro casais · Oito convivas</span><i class="dot"></i>
+      <span>Nº 08 — Agosto</span><i class="dot"></i>
+      <span>Circulação estritamente privada</span>
+    </div>
+    <h1 class="serif">Sucesso <em>Absoluto</em></h1>
+    <p class="sub">Um guia de convivência para quatro casais que teimam em se reencontrar no Rio — datas, mesas e um tribunal de fofoca. Esta é a <strong>direção editorial A: Editorial Riviera</strong>, uma releitura de revista de viagem de luxo do protótipo original.</p>
+    <div class="foil-bar"></div>
+  </header>
+
+  <div class="gallery">
+
+    <!-- ============ 01 · LOGIN / A CAPA ============ -->
+    <section class="plate">
+      <div class="folio">
+        <span class="no serif">01</span>
+        <span class="name serif">A Portaria</span>
+        <span class="cap">Entrada · Escolha quem você é</span>
+      </div>
+      <div class="phone anim">
+        <div class="screen">
+          <div class="notch"></div>
+          <div class="statusbar"><span>9:41</span><span class="r">Riviera · Rio</span></div>
+          <div class="scroll"><div class="pad">
+            <div class="eyebrow" style="margin-top:6px">
+              <span class="kicker">Encontro de Casais</span><span class="ln"></span>
+            </div>
+            <h2 class="display" style="font-size:52px;margin:14px 0 0">Sucesso<br><em style="font-style:italic;font-weight:300;color:var(--marine)">Absoluto</em></h2>
+            <p class="lede" style="margin:14px 0 22px">Só os oito entram. Quem é você?</p>
+
+            <div class="kicker" style="margin-bottom:0">O expediente · toque no seu nome</div>
+            <div class="contrib" style="margin-top:12px">
+              <button class="sel"><span class="nm serif">Davi</span><span class="cp">Casal A</span></button>
+              <button><span class="nm serif">Isabel</span><span class="cp">Casal A</span></button>
+              <button><span class="nm serif">Luca</span><span class="cp">Casal B</span></button>
+              <button><span class="nm serif">Mayara</span><span class="cp">Casal B</span></button>
+              <button><span class="nm serif">Maria Gabriela</span><span class="cp">Casal C</span></button>
+              <button><span class="nm serif">Vinicius</span><span class="cp">Casal C</span></button>
+              <button><span class="nm serif">Vitor</span><span class="cp">Casal D</span></button>
+              <button><span class="nm serif">Gabrielle</span><span class="cp">Casal D</span></button>
+            </div>
+
+            <div class="kicker" style="margin:22px 0 10px">Senha de quatro dígitos</div>
+            <div class="pins">
+              <div class="p f">•</div><div class="p f">•</div><div class="p">4</div><div class="p"></div>
+            </div>
+            <button class="btn gold" style="margin-top:20px">Entrar</button>
+            <p style="text-align:center;font-size:10px;letter-spacing:.1em;color:var(--ink-faint);margin:14px 0 0;font-weight:500;line-height:1.6">Acesso restrito ao grupo — cada pessoa tem seu próprio código.</p>
+          </div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 02 · HOME / A PAUTA ============ -->
+    <section class="plate">
+      <div class="folio">
+        <span class="no serif">02</span>
+        <span class="name serif">A Pauta</span>
+        <span class="cap">Home · O medidor de oito</span>
+      </div>
+      <div class="phone anim">
+        <div class="screen">
+          <div class="notch"></div>
+          <div class="statusbar"><span>9:41</span><span class="r">Em votação</span></div>
+          <div class="scroll"><div class="pad">
+            <div class="eyebrow" style="margin-top:6px"><span class="kicker">A matéria de capa</span><span class="ln"></span></div>
+            <h2 class="display" style="font-size:44px;margin:14px 0 6px">Bora marcar o próximo?</h2>
+            <p class="lede">Jantar de agosto está em votação de datas.</p>
+
+            <!-- medidor de oito, reimaginado -->
+            <div style="margin:26px 0 8px" class="kicker">O medidor de oito</div>
+            <div class="gauge">
+              <div class="frac serif">07<sup>/8</sup></div>
+              <div class="meta">
+                <div class="strokes">
+                  <i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i>
+                  <i class="on"></i><i class="on"></i><i class="on"></i><i class="me"></i>
+                </div>
+                <div style="font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint);font-weight:600">Já votaram · você é o oitavo traço</div>
+              </div>
+            </div>
+
+            <div class="quote" style="margin:22px 0">Falta apenas <b>você</b> votar para fecharmos a mesa.</div>
+            <button class="btn" style="margin-bottom:22px">Votar nas datas</button>
+
+            <div class="kicker" style="margin-bottom:6px">O roteiro da edição</div>
+            <ol class="index">
+              <li class="done"><span class="n serif">01</span><span class="t serif">Escolher datas</span><span class="tag">Fechado</span></li>
+              <li class="now"><span class="n serif">02</span><span class="t serif">Escolher lugares</span><span class="tag">Agora</span></li>
+              <li><span class="n serif">03</span><span class="t serif">Confirmar</span></li>
+              <li><span class="n serif">04</span><span class="t serif">Reservar</span></li>
+              <li><span class="n serif">05</span><span class="t serif">Encontro</span></li>
+            </ol>
+          </div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 03 · PLACE VOTING / O GUIA ============ -->
+    <section class="plate">
+      <div class="folio">
+        <span class="no serif">03</span>
+        <span class="name serif">O Guia</span>
+        <span class="cap">Votação de lugares · Veto secreto</span>
+      </div>
+      <div class="phone">
+        <div class="screen">
+          <div class="notch"></div>
+          <div class="statusbar"><span>9:41</span><span class="r">6 / 8 votaram</span></div>
+          <div class="scroll"><div class="pad">
+            <div class="eyebrow" style="margin-top:6px"><span class="kicker">A curadoria</span><span class="ln"></span></div>
+            <h2 class="display" style="font-size:44px;margin:14px 0 6px">Onde vamos?</h2>
+            <p class="lede">Até 3 escolhas (3, 2 e 1 ponto) e 1 veto secreto por pessoa.</p>
+            <div style="display:flex;align-items:baseline;gap:10px;margin-top:14px">
+              <span class="serif" style="font-size:26px;font-weight:340;font-style:italic;color:var(--gold)">6</span>
+              <span style="font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-faint);font-weight:600">de 8 votaram · faltam Vitor e Gabrielle</span>
+            </div>
+
+            <div style="margin-top:6px">
+              <div class="listing">
+                <div class="photo" style="background:linear-gradient(135deg,#123B3A,#2C5F5B)"><span class="rk serif">1</span></div>
+                <div>
+                  <h4 class="serif">Espírito Santa</h4>
+                  <div class="meta">Restaurante · Santa Teresa</div>
+                  <p class="d">Amazônico com varanda e vista da cidade.</p>
+                  <div class="ballot"><b class="on">3 pts</b><b>2 pts</b><b>1 pt</b></div>
+                </div>
+              </div>
+              <div class="listing">
+                <div class="photo" style="background:linear-gradient(135deg,#A9834A,#CBA867)"><span class="rk serif">2</span></div>
+                <div>
+                  <h4 class="serif">Aconchego Carioca</h4>
+                  <div class="meta">Boteco · Praça da Bandeira</div>
+                  <p class="d">Boteco premiado, bolinho de feijoada lendário.</p>
+                  <div class="ballot"><b>3 pts</b><b class="on">2 pts</b><b>1 pt</b></div>
+                </div>
+              </div>
+              <div class="listing">
+                <div class="photo" style="background:linear-gradient(135deg,#7E1C10,#C0301C)"><span class="rk serif">3</span></div>
+                <div>
+                  <h4 class="serif">Bar do Momo</h4>
+                  <div class="meta">Bar · Tijuca</div>
+                  <p class="d">Chope gelado e porções generosas, clima de bairro.</p>
+                  <div class="ballot"><b>3 pts</b><b>2 pts</b><b class="on">1 pt</b></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- veto secreto · fora da disputa -->
+            <div class="confidential">
+              <div class="h"><span class="seal">Confidencial</span><span class="kicker" style="letter-spacing:.2em">Fora da disputa</span></div>
+              <p style="font-size:12px;color:var(--ink-soft);margin:10px 0 12px;line-height:1.5">Um veto de qualquer pessoa tira o lugar da disputa. Ninguém precisa se explicar.</p>
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="width:40px;height:40px;border-radius:2px;background:linear-gradient(135deg,#5C1A2B,#7A2A3D);opacity:.5;filter:grayscale(.3)"></div>
+                <div><div class="serif" style="font-size:15px;color:var(--ink-faint);text-decoration:line-through">Sushi Leblon</div>
+                <div style="font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--scandal);font-weight:700">Vetado em sigilo — ninguém sabe por quem</div></div>
+              </div>
+            </div>
+
+            <button class="btn gold" style="margin-top:20px">Confirmar meu voto (3)</button>
+          </div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 04 · MURAL DA VERGONHA / O TRIBUNAL ============ -->
+    <section class="plate">
+      <div class="folio">
+        <span class="no serif">04</span>
+        <span class="name serif">O Tribunal</span>
+        <span class="cap">Mural da Vergonha · Coluna social</span>
+      </div>
+      <div class="phone anim">
+        <div class="screen scandal-screen">
+          <div class="notch"></div>
+          <div class="statusbar"><span>9:41</span><span class="r">Coluna social</span></div>
+          <div class="scroll">
+            <div class="scandal-hd">
+              <div class="kk">Lado B do histórico</div>
+              <h2>Mural da <em>Vergonha</em></h2>
+              <p>Tudo que aconteceu com menos de oito é, por definição, uma infração. Os traídos julgam.</p>
+            </div>
+            <div class="scandal-body">
+
+              <div class="case">
+                <div class="burn">
+                  <div class="img" style="background:linear-gradient(135deg,#C56A49,#C9A24B)"></div>
+                  <div class="char"></div><div class="ember"></div>
+                  <div class="stamp">Condenados</div>
+                  <div class="badge-proof">Prova nº 1 — sendo destruída</div>
+                  <div class="cap">Mamma Jamma</div>
+                </div>
+                <div class="sev">Conluio a quatro</div>
+                <h3 class="serif">Pegos no Mamma Jamma</h3>
+                <div class="metaline">14 mar · Prova: A própria selfie — sorrindo, sem remorso</div>
+
+                <!-- medidor de oito, em modo escândalo -->
+                <div class="strokes scandal-strokes" style="margin:16px 0 6px">
+                  <i class="guilty"></i><i class="guilty"></i><i class="guilty"></i><i class="guilty"></i>
+                  <i class="off"></i><i class="off"></i><i class="off"></i><i class="off"></i>
+                </div>
+                <div class="metaline" style="margin-bottom:18px">4 saíram · 4 traídos</div>
+
+                <div class="defense">
+                  <div class="dl">Alegação da defesa</div>
+                  <p class="dq serif">“Foi de última hora, juro.”</p>
+                </div>
+                <p class="body">Quatro pratos, azeite na mesa e cardápio aberto. A perícia identificou o local pela garrafa de olio d'oliva. Premeditação evidente.</p>
+
+                <div class="verdict">
+                  <div class="row"><div class="k">Veredito</div><div class="v g">Condenados</div></div>
+                  <div class="row"><div class="k">Votos</div><div class="v"><span class="votes"><i class="y"></i><i class="y"></i><i class="y"></i><i class="y"></i></span><span style="margin-left:12px;font-size:12px;letter-spacing:.02em;color:#C4B9A5">Julgamento dos traídos: 4 × 0 pela condenação</span></div></div>
+                  <div class="row"><div class="k">Pena</div><div class="v">Sobremesa de todos no próximo encontro — e repetir a Mamma Jamma a oito.</div></div>
+                </div>
+                <p class="subnote">Quem estava na foto não vota.</p>
+              </div>
+
+              <!-- Placar da panelinha -->
+              <div class="placar">
+                <div class="kk" style="margin-bottom:14px">Placar da panelinha</div>
+                <div class="prow"><span class="serif nm">Luca &amp; Mayara + Vitor &amp; Gabrielle</span><span class="ct">1 infração</span></div>
+                <div class="prow"><span class="serif nm clean">Davi &amp; Isabel</span><span class="ct clean">Ficha limpa</span></div>
+                <div class="prow"><span class="serif nm clean">Maria Gabriela &amp; Vinicius</span><span class="ct clean">Ficha limpa</span></div>
+                <p class="pfoot">Os outros seis seguem com ficha limpa. Por enquanto.</p>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <footer class="colophon">
+    <div class="foil-word">Editorial Riviera</div>
+    <div>Variação A · Direção de arte para o protótipo “Sucesso Absoluto”</div>
+    <div>Fraunces &amp; Archivo · Marfim, ouro e vermelho-escândalo</div>
+  </footer>
+
+</div>
