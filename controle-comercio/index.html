@@ -374,6 +374,26 @@
 
   function uid() { return "u" + Math.random().toString(36).slice(2, 9); }
   function fmt(n) { return brl.format(isFinite(n) ? n : 0); }
+
+  // Conserta texto que foi salvo com acentos embolados (UTF-8 lido como Latin-1).
+  // Ex.: "DepÃ³sito" -> "Depósito", "AluguÃ©is" -> "Aluguéis".
+  function fixText(s) {
+    if (typeof s !== "string" || !s) return s;
+    if (!/[\u00c2\u00c3\u00e2][\u0080-\u00bf]/.test(s)) return s;
+    try { var f = decodeURIComponent(escape(s)); return f.indexOf("\uFFFD") >= 0 ? s : f; }
+    catch (e) { return s; }
+  }
+  function repairState(st) {
+    if (!st || !st.meses) return false;
+    var antes = JSON.stringify(st);
+    if (st.prop) st.prop = fixText(st.prop);
+    Object.keys(st.meses).forEach(function (k) {
+      var mm = st.meses[k];
+      (mm.unidades || []).forEach(function (u) { u.nome = fixText(u.nome); u.inquilino = fixText(u.inquilino); });
+      (mm.despesas || []).forEach(function (d) { d.desc = fixText(d.desc); });
+    });
+    return JSON.stringify(st) !== antes;
+  }
   function mesLabel(key) { var p = key.split("-"); return MESES[parseInt(p[1],10)-1] + " / " + p[0]; }
 
   // ---------- Custom confirm / toast (funcionam mesmo onde o confirm nativo é bloqueado) ----------
@@ -439,7 +459,7 @@
   function load() {
     try {
       var s = JSON.parse(localStorage.getItem(LS_KEY));
-      if (s && s.meses && Object.keys(s.meses).length) return s;
+      if (s && s.meses && Object.keys(s.meses).length) { repairState(s); return s; }
     } catch (e) {}
     return defaultState();
   }
@@ -485,9 +505,11 @@
           var localT = state.updatedAt || 0;
           if (remoteT >= localT) {
             state = row.dados;
+            var consertou = repairState(state); // conserta acentos vindos da nuvem
             if (!state.meses[state.mesAtivo]) state.mesAtivo = Object.keys(state.meses).sort().reverse()[0];
             saveLocal(); renderAll();
             setSync("Salvo na nuvem ✓", "ok");
+            if (consertou) pushNow(); // devolve a versão limpa para a nuvem
           } else {
             pushNow(); // o deste aparelho é mais novo -> sobe
           }
