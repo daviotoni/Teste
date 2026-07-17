@@ -6,12 +6,14 @@
 
 Aplicacao web em React/Vite para controle de processos, calendario, documentos, modelos, leis e configuracoes.
 
-## Como funciona o banco de dados
+## Estado da arquitetura de dados
 
-O JurisControl agora funciona de duas formas:
+O armazenamento local e o esquema JSONB abaixo pertencem ao protótipo visual existente:
 
 1. **Sem configuracao de banco central:** salva os dados no navegador, usando IndexedDB. Nesse modo, os dados ficam apenas no computador/navegador onde foram cadastrados.
-2. **Com Supabase configurado:** salva os dados em um banco central online, permitindo acessar os mesmos dados em outros computadores.
+2. **Com Supabase configurado:** o protótipo salva dados em um banco central online, permitindo acessar os mesmos dados em outros computadores.
+
+O SIGLA-CMDC não deve ser implantado com esse modo de protótipo. O núcleo institucional normalizado está em `database/migrations/0001_institutional_core.sql`; ele introduz autenticação, autorização, auditoria, versionamento e políticas de acesso restritivas. O plano de migração está em `docs/migration-plan.md`.
 
 ## Rodar localmente
 
@@ -35,14 +37,16 @@ O JurisControl agora funciona de duas formas:
 
 Crie uma conta em https://supabase.com e depois crie um novo projeto.
 
-### 2. Criar as tabelas
+### 2. Aplicar migrations do SIGLA-CMDC
 
 No painel do Supabase:
 
-1. Abra **SQL Editor**.
-2. Clique em **New query**.
-3. Copie todo o conteudo do arquivo `supabase/schema.sql`.
-4. Cole no editor e clique em **Run**.
+1. Crie primeiro um ambiente de homologação vazio.
+2. Faça backup de dados e anexos do protótipo, se existirem.
+3. Aplique as migrations versionadas em `database/migrations/` usando uma ferramenta de migrations PostgreSQL ou Supabase CLI.
+4. Execute os seeds institucionais em `database/seeds/` somente após a migration correspondente.
+
+Não execute `supabase/schema.sql`: ele foi descontinuado e não é um caminho de implantação do SIGLA-CMDC.
 
 ### 3. Configurar as chaves no projeto
 
@@ -79,6 +83,6 @@ Se voce ja cadastrou dados antes de configurar o Supabase:
 
 Isso envia os dados locais para o Supabase.
 
-## Observacao de seguranca
+## Observação de segurança
 
-A configuracao inicial do arquivo `supabase/schema.sql` e simples para prototipo e uso inicial. Ela permite leitura e escrita usando a chave anonima do Supabase. Antes de usar com dados sensiveis ou em producao, o ideal e implementar autenticacao real no backend e politicas de seguranca mais restritas.
+O esquema legado permitia leitura e escrita usando chave anônima e não deve ser usado com dados institucionais, pessoais ou de produção. A migração normalizada é deny-by-default no banco; a API autenticada deverá aplicar autorização por papel, unidade, classificação de acesso e regras de segregação.
