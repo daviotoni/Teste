@@ -1,0 +1,114 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, 'claude/**']
+
+# Cancela execuções antigas do mesmo ref para não desperdiçar runners.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Qualidade (sem banco)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - name: git diff --check
+        run: git diff --check
+
+  integration-postgres:
+    name: Integração (PostgreSQL real)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: sigla_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: '5432'
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: sigla_test
+      # Papel administrativo (aplica migrations/seeds e executa funções nos testes).
+      DATABASE_ADMIN_URL: postgres://postgres:postgres@localhost:5432/sigla_test
+      # Papel de aplicação SEM BYPASSRLS (asserções de RLS). Se tiver bypassrls,
+      # o próprio teste falha explicitamente.
+      DATABASE_URL: postgres://app_api:app_api_pw@localhost:5432/sigla_test
+      # Proíbe pular os testes de integração: ausência de banco vira falha.
+      CI_REQUIRE_INTEGRATION: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: Instalar cliente psql
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
+
+      - name: Criar papel de aplicação (sem BYPASSRLS)
+        run: |
+          psql -v ON_ERROR_STOP=1 -c "CREATE ROLE app_api LOGIN PASSWORD 'app_api_pw' NOBYPASSRLS;"
+
+      - name: Aplicar migrations em ordem
+        run: |
+          for f in \
+            database/migrations/0001_institutional_core.sql \
+            database/migrations/0002_integrity_and_domains.sql \
+            database/migrations/0003_rls_policies.sql \
+            database/migrations/0004_transactional_functions.sql; do
+            echo ">> aplicando $f"
+            psql -v ON_ERROR_STOP=1 -f "$f"
+          done
+
+      - name: Aplicar seeds
+        run: |
+          for f in \
+            database/seeds/0001_institutional_units.sql \
+            database/seeds/0002_rbac_and_numbering.sql; do
+            echo ">> aplicando $f"
+            psql -v ON_ERROR_STOP=1 -f "$f"
+          done
+
+      - name: Conceder acesso ao papel de aplicação
+        run: |
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          GRANT USAGE ON SCHEMA public TO app_api;
+          GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO app_api;
+          GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO app_api;
+          GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_api;
+          SQL
+
+      - name: Garantir que o papel de aplicação NÃO ignora RLS
+        run: |
+          BYPASS=$(psql -tA -c "SELECT rolbypassrls OR rolsuper FROM pg_roles WHERE rolname='app_api';")
+          echo "app_api bypassrls/super = $BYPASS"
+          if [ "$BYPASS" != "f" ]; then
+            echo "ERRO: app_api ignora RLS — testes seriam falso-positivos."; exit 1
+          fi
+
+      - name: Testes de integração (RLS, auditoria, transações)
+        run: npm run test:integration

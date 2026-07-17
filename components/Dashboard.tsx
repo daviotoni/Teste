@@ -117,7 +117,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       pareceres: pareceresCanvasRef.current
     };
     
-    Object.values(chartsRef.current).forEach(chart => chart?.destroy());
+    Object.values(chartsRef.current).forEach(chart => (chart as { destroy?: () => void } | null)?.destroy?.());
     chartsRef.current = {};
 
     if (!processos || !window.Chart) return;
@@ -186,7 +186,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     }
 
     return () => {
-      Object.values(chartsRef.current).forEach(chart => chart?.destroy());
+      Object.values(chartsRef.current).forEach(chart => (chart as { destroy?: () => void } | null)?.destroy?.());
     }
   }, [processos, theme]);
 

@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect, createContext, useCallback, useMemo } from 'react';
 import type { User, ToastData, Theme, TabKey, ProcessFilter } from './types';
 import { dbHelper } from './services/dbService';
-import { authService } from './services/authService';
+import { isAuthConfigured, getAccessToken, onAuthChange } from './services/supabaseAuth';
 import Login from './components/Login';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
@@ -12,8 +11,11 @@ import Documentos from './components/Documentos';
 import Leis from './components/Leis';
 import Configuracoes from './components/Configuracoes';
 import ToastContainer from './components/common/ToastContainer';
+import InstitutionalApp from './components/InstitutionalApp';
 
-// --- CONTEXT DEFINITIONS ---
+// Usuário fixo do modo demonstração local. NÃO é uma identidade institucional:
+// não há senha, não há acesso ao banco central, apenas IndexedDB deste navegador.
+const DEMO_USER: User = { id: 0, name: 'Demonstração Local', login: 'demo', role: 'user' };
 
 export const AppContext = createContext<{
   user: User | null;
@@ -21,9 +23,9 @@ export const AppContext = createContext<{
   showToast: (message: string, type?: 'success' | 'danger' | 'info') => void;
   theme: Theme;
   setTheme: (theme: Theme) => void;
-  data: any; // Simplified for brevity, in a real app would be strongly typed
+  data: any;
   refreshData: () => Promise<void>;
-  config: any; // App-wide config
+  config: any;
   updateConfig: (key: string, value: any) => Promise<void>;
 }>({
   user: null,
@@ -37,10 +39,57 @@ export const AppContext = createContext<{
   updateConfig: async () => {},
 });
 
-// --- MAIN APP COMPONENT ---
+type View = 'loading' | 'login' | 'institutional' | 'legacy';
 
 const App: React.FC = () => {
-  const [user, setUser] = useState<User | null>(authService.getLoggedInUser());
+  const [view, setView] = useState<View>('loading');
+
+  // Verifica sessão institucional ativa (Supabase Auth) ao iniciar.
+  useEffect(() => {
+    let active = true;
+    const check = async () => {
+      if (isAuthConfigured()) {
+        const token = await getAccessToken();
+        if (active) setView(token ? 'institutional' : 'login');
+      } else if (active) {
+        setView('login');
+      }
+    };
+    void check();
+    const unsub = onAuthChange((signedIn) => {
+      setView((current) => (current === 'legacy' ? current : signedIn ? 'institutional' : 'login'));
+    });
+    return () => { active = false; unsub(); };
+  }, []);
+
+  if (view === 'loading') {
+    return (
+      <div className="flex items-center justify-center h-screen bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300">
+        Carregando SIGLA-CMDC...
+      </div>
+    );
+  }
+
+  if (view === 'institutional') {
+    return <InstitutionalApp onSignOut={() => setView('login')} />;
+  }
+
+  if (view === 'legacy') {
+    return <LegacyDemoApp onExit={() => setView('login')} />;
+  }
+
+  return (
+    <Login
+      onInstitutionalSignedIn={() => setView('institutional')}
+      onEnterLegacyDemo={() => setView('legacy')}
+    />
+  );
+};
+
+// --- MODO DEMONSTRAÇÃO LOCAL (LEGADO) ---------------------------------------
+// Componentes legados baseados em IndexedDB, isolados como demonstração e sem
+// acesso ao banco institucional. Banner permanente deixa a limitação explícita.
+const LegacyDemoApp: React.FC<{ onExit: () => void }> = ({ onExit }) => {
   const [isDbReady, setIsDbReady] = useState(false);
   const [data, setData] = useState<any>({});
   const [config, setConfig] = useState<any>({});
@@ -59,46 +108,19 @@ const App: React.FC = () => {
   }, []);
 
   const loadConfig = useCallback(async () => {
-    // FIX: Explicitly type the result from dbHelper.get to ensure it's an object that can be spread.
-    const savedConfig = (await dbHelper.get<{[key: string]: any}>('config', 'app_config')) || {};
+    const savedConfig = (await dbHelper.get<{ [key: string]: any }>('config', 'app_config')) || {};
     const defaultConfig = { theme: 'system', dismissedNotifications: [] };
     const mergedConfig = { ...defaultConfig, ...savedConfig };
     setConfig(mergedConfig);
-    // FIX: Explicitly cast the theme from the merged config to the 'Theme' type.
-    // This resolves type errors where a general 'string' from the untyped config object
-    // was being passed to functions expecting the specific 'light' | 'dark' | 'system' literal type.
     setThemeState(mergedConfig.theme as Theme);
     applyTheme(mergedConfig.theme as Theme);
   }, [applyTheme]);
-  
+
   const updateConfig = async (key: string, value: any) => {
     const newConfig = { ...config, [key]: value };
     setConfig(newConfig);
     await dbHelper.put('config', { key: 'app_config', ...newConfig });
   };
-
-
-  useEffect(() => {
-    const initializeApp = async () => {
-      await dbHelper.init();
-      await authService.initializeDefaultUser();
-      await loadConfig();
-      setIsDbReady(true);
-      if (authService.getLoggedInUser()) {
-        await refreshData();
-      }
-    };
-    initializeApp();
-
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleThemeChange = () => {
-      if (theme === 'system') {
-        applyTheme('system');
-      }
-    };
-    mediaQuery.addEventListener('change', handleThemeChange);
-    return () => mediaQuery.removeEventListener('change', handleThemeChange);
-  }, []); // Removed dependencies to run only once
 
   const refreshData = useCallback(async () => {
     if (!isDbReady) return;
@@ -116,24 +138,17 @@ const App: React.FC = () => {
   }, [isDbReady]);
 
   useEffect(() => {
-    if (user && isDbReady) {
-      refreshData();
-    }
-  }, [user, isDbReady, refreshData]);
+    const initializeApp = async () => {
+      await dbHelper.init();
+      await loadConfig();
+      setIsDbReady(true);
+    };
+    void initializeApp();
+  }, [loadConfig]);
 
-  const handleLoginSuccess = (loggedInUser: User) => {
-    setUser(loggedInUser);
-    if (sessionStorage.getItem('showResetToast')) {
-        showToast("Banco de usuários atualizado. Login: admin/admin.", "info");
-        sessionStorage.removeItem('showResetToast');
-    }
-  };
-
-  const logout = () => {
-    authService.logout();
-    setUser(null);
-    setData({});
-  };
+  useEffect(() => {
+    if (isDbReady) void refreshData();
+  }, [isDbReady, refreshData]);
 
   const showToast = (message: string, type: 'success' | 'danger' | 'info' = 'success') => {
     setToasts((prev) => [...prev, { id: Date.now(), message, type }]);
@@ -144,13 +159,13 @@ const App: React.FC = () => {
     applyTheme(newTheme);
     await updateConfig('theme', newTheme);
   };
-  
+
   const handleNavigate = (tab: TabKey, options: { filter?: ProcessFilter | null; date?: string | null } = {}) => {
     setActiveTab(tab);
     setFilter(options.filter || null);
     setCalendarDate(options.date || null);
   };
-  
+
   const renderActiveTab = () => {
     switch (activeTab) {
       case 'dashboard': return <Dashboard onNavigate={handleNavigate} />;
@@ -164,8 +179,8 @@ const App: React.FC = () => {
   };
 
   const contextValue = useMemo(() => ({
-    user,
-    logout,
+    user: DEMO_USER,
+    logout: onExit,
     showToast,
     theme,
     setTheme: handleSetTheme,
@@ -173,26 +188,24 @@ const App: React.FC = () => {
     refreshData,
     config,
     updateConfig,
-  }), [user, theme, data, refreshData, logout, config]);
-
+  }), [theme, data, refreshData, config]);
 
   if (!isDbReady) {
     return (
       <div className="flex items-center justify-center h-screen bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300">
-        Carregando JurisControl...
+        Carregando demonstração local...
       </div>
     );
   }
 
   return (
     <AppContext.Provider value={contextValue}>
-      {!user ? (
-        <Login onLoginSuccess={handleLoginSuccess} />
-      ) : (
-        <Layout activeTab={activeTab} setActiveTab={handleNavigate}>
-          {renderActiveTab()}
-        </Layout>
-      )}
+      <div className="bg-amber-500 text-amber-950 text-sm font-medium text-center px-4 py-2">
+        Dados exibidos no modo legado local não estão centralizados e não devem ser usados para atividade institucional.
+      </div>
+      <Layout activeTab={activeTab} setActiveTab={handleNavigate}>
+        {renderActiveTab()}
+      </Layout>
       <ToastContainer toasts={toasts} setToasts={setToasts} />
     </AppContext.Provider>
   );

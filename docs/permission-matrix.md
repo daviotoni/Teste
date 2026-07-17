@@ -16,3 +16,11 @@ Esta matriz é inicial e configurável. A concessão efetiva requer papel ativo,
 | Administrar perfis | Não por padrão | Não | Sim, sem alterar conteúdo técnico |
 
 Os papéis específicos de Consultoria, Controladoria, Plenário, Ouvidoria e Procuradoria serão adicionados nos respectivos módulos especializados, mantendo estas regras transversais.
+
+## Concessões implementadas (seed 0002)
+
+Vínculos papel → permissão aplicados em `database/seeds/0002_rbac_and_numbering.sql`:
+
+- **UNIT_MANAGER**: `process.view.own_unit`, `process.create`, `process.assign`, `process.forward`, `document.create`.
+- **UNIT_STAFF**: `process.view.own_unit`, `process.create`, `document.create`.
+- **SYSTEM_ADMINISTRATOR**: `user.admin`, `unit.admin` — administração de contas/estrutura, **sem** acesso automático a conteúdo institucional restrito (garantido pela RLS, que concede acesso por lotação/atribuição, nunca por papel técnico).
