@@ -57,3 +57,49 @@ GET             /unit-inbox
 ```
 
 A operação cria uma movimentação imutável, atualiza o processo em transação, cria/atualiza atribuições e prazos quando aplicável e grava o evento de auditoria.
+
+## Implementação atual (primeiro módulo)
+
+Endpoints implementados em `server/`:
+
+```text
+GET    /api/v1/health
+GET    /api/v1/me
+GET    /api/v1/organizational-units
+GET    /api/v1/organizational-units/:id
+GET    /api/v1/unit-inbox
+GET    /api/v1/processes
+POST   /api/v1/processes
+GET    /api/v1/processes/:id
+POST   /api/v1/processes/:id/movements
+GET    /api/v1/processes/:id/documents
+POST   /api/v1/processes/:id/documents
+POST   /api/v1/documents/:id/versions
+GET    /api/v1/tasks
+POST   /api/v1/tasks
+PATCH  /api/v1/tasks/:id
+```
+
+Mapeamento operação → função transacional do banco (auditoria na mesma transação):
+
+| Operação | Função |
+|---|---|
+| Criar processo | `sigla_create_process` |
+| Movimentar processo | `sigla_move_process` |
+| Atribuir/redistribuir | `sigla_assign_process` |
+| Criar tarefa | `sigla_create_task` |
+| Alterar prazo | `sigla_change_deadline` |
+| Criar documento | `sigla_create_document` |
+| Criar versão | `sigla_create_document_version` |
+| Solicitar assinatura | `sigla_request_signature` |
+| Registrar acesso restrito | `sigla_log_restricted_access` |
+
+Notas de implementação:
+
+- Autenticação por bearer token verificado no servidor; identidade institucional
+  resolvida via `sigla_resolve_identity` e aplicada à RLS com `SET LOCAL app.user_id`.
+- `Idempotency-Key` em `POST` (criação/movimentação); `If-Match`/`X-Entity-Version`
+  para concorrência otimista (resposta `409` em conflito).
+- Erros em `application/problem+json`; SQLSTATE do banco mapeados para HTTP
+  (`42501→403`, `40001→409`, `22023→422`, `28000→401`, `P0002→404`).
+- As demais rotas do rascunho acima permanecem previstas para os próximos módulos.
