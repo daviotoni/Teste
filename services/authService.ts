@@ -1,6 +1,5 @@
 
 import type { User } from '../types';
-import { dbHelper } from './dbService';
 
 class AuthService {
     private bufferToHex(buffer: ArrayBuffer): string {
@@ -55,34 +54,13 @@ class AuthService {
     }
     
     async initializeDefaultUser() {
-        const users = await dbHelper.getAll<User>('users');
-        // Check for old insecure format (no salt) or no users
-        if (users.length === 0 || !users[0].salt) {
-             console.warn("Formato de senha antigo ou nenhum usuário encontrado. Redefinindo...");
-             await dbHelper.clear('users');
-             const { salt, hash } = await this.hashPassword('admin');
-             const defaultUser: User = { 
-                id: Date.now(), 
-                name: 'Administrador', 
-                login: 'admin', 
-                salt,
-                hashedPassword: hash, 
-                role: 'admin' 
-            };
-            await dbHelper.put('users', defaultUser);
-            sessionStorage.setItem('showResetToast', 'true');
-        }
+        // Intentionally empty: institutional accounts are provisioned by the identity provider.
     }
 
     async login(login: string, pass: string): Promise<User | null> {
-        const users = await dbHelper.getAll<User>('users');
-        const user = users.find(u => u.login === login);
-
-        if (user && user.salt && user.hashedPassword && await this.verifyPassword(pass, user.salt, user.hashedPassword)) {
-            const userSessionData: User = { id: user.id, name: user.name, login: user.login, role: user.role };
-            sessionStorage.setItem('loggedInUser', JSON.stringify(userSessionData));
-            return userSessionData;
-        }
+        void login;
+        void pass;
+        // Local credentials were removed; the upcoming login screen will use OIDC/Supabase Auth.
         return null;
     }
 

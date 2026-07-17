@@ -1,4 +1,4 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { type SupabaseClient } from '@supabase/supabase-js';
 
 const DB_NAME = 'JurisControlDB_v1';
 const DB_VERSION = 1;
@@ -28,7 +28,7 @@ class DBHelper {
     private db: IDBDatabase | null = null;
     private supabase: SupabaseClient | null = null;
     private mode: ConnectionMode = 'indexeddb';
-    private statusMessage = 'Usando banco local do navegador.';
+    private statusMessage = 'Modo legado local: não use para dados institucionais.';
 
     async init() {
         await this.initIndexedDB();
@@ -44,18 +44,10 @@ class DBHelper {
     }
 
     private initSupabase() {
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-        if (!supabaseUrl || !supabaseAnonKey) {
-            this.mode = 'indexeddb';
-            this.statusMessage = 'Banco central nao configurado. Os dados estao sendo salvos apenas neste navegador.';
-            return;
-        }
-
-        this.supabase = createClient(supabaseUrl, supabaseAnonKey);
-        this.mode = 'supabase';
-        this.statusMessage = 'Banco central Supabase configurado. Os dados serao sincronizados entre computadores.';
+        // The legacy JSONB client must never connect to the normalized institutional schema.
+        this.supabase = null;
+        this.mode = 'indexeddb';
+        this.statusMessage = 'Modo legado local. Dados institucionais exigem a API autenticada; a sincronização direta foi desativada.';
     }
 
     private async initIndexedDB() {
@@ -208,44 +200,7 @@ class DBHelper {
     }
 
     async migrateLocalToRemote(): Promise<{ migrated: number; skipped: number }> {
-        if (!this.shouldUseSupabase()) {
-            throw new Error('Configure o Supabase antes de migrar os dados locais.');
-        }
-
-        let migrated = 0;
-        let skipped = 0;
-
-        for (const storeName of STORES) {
-            const items = await this.getAllLocal<any>(storeName);
-            const tableName = this.getTableName(storeName);
-            const primaryKey = this.getPrimaryKeyName(storeName);
-
-            const rows = items
-                .filter(item => item && item[primaryKey] !== undefined && item[primaryKey] !== null)
-                .map(item => ({
-                    [primaryKey]: item[primaryKey],
-                    data: item,
-                    updated_at: new Date().toISOString(),
-                }));
-
-            skipped += items.length - rows.length;
-
-            if (rows.length === 0) {
-                continue;
-            }
-
-            const { error } = await this.supabase!
-                .from(tableName)
-                .upsert(rows);
-
-            if (error) {
-                throw new Error(`Erro ao migrar ${storeName}: ${error.message}`);
-            }
-
-            migrated += rows.length;
-        }
-
-        return { migrated, skipped };
+        throw new Error('A migração direta do protótipo foi desativada. Use o futuro importador institucional auditável.');
     }
 
     private async getLocal<T,>(storeName: string, key: IDBValidKey): Promise<T | undefined> {

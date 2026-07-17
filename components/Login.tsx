@@ -23,7 +23,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       if (user) {
         onLoginSuccess(user);
       } else {
-        setError('Login ou senha inválidos');
+        setError('O acesso local foi desativado. Utilize a autenticação institucional quando ela estiver configurada.');
       }
     } catch (err) {
       setError('Ocorreu um erro ao tentar fazer login.');
