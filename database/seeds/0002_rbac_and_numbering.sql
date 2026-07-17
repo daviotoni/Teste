@@ -33,6 +33,15 @@ SELECT r.id, p.id FROM roles r JOIN permissions p ON p.code = ANY (ARRAY[
 ]) WHERE r.code = 'SYSTEM_ADMINISTRATOR'
 ON CONFLICT DO NOTHING;
 
+-- Tipos de documento configuráveis (sem conteúdo real).
+INSERT INTO document_types(code,name) VALUES
+  ('OFFICIAL_LETTER','Ofício'),
+  ('TECHNICAL_OPINION','Parecer técnico'),
+  ('DISPATCH','Despacho'),
+  ('MEMORANDUM','Memorando'),
+  ('DOCUMENT_REVIEW','Revisão de documento')
+ON CONFLICT (code) DO NOTHING;
+
 -- Uma regra de numeração por tipo de processo (prefixo PROC, reset anual).
 -- NOT EXISTS garante idempotência independentemente de índices.
 INSERT INTO numbering_rules(document_or_process_type, organizational_unit_id, prefix, separator, number_length, annual_reset, starting_number, active)

@@ -14,8 +14,11 @@ import pg from 'pg';
 const APP_URL = process.env.DATABASE_URL;
 const ADMIN_URL = process.env.DATABASE_ADMIN_URL;
 const enabled = Boolean(APP_URL && ADMIN_URL);
+// Em CI (CI_REQUIRE_INTEGRATION=1) a suíte NÃO pode pular: se faltar banco, ela
+// roda mesmo assim e falha no beforeAll — pular deixa de ser um caminho válido.
+const mustRun = process.env.CI_REQUIRE_INTEGRATION === '1';
 
-describe.skipIf(!enabled)('núcleo institucional (integração)', () => {
+describe.skipIf(!enabled && !mustRun)('núcleo institucional (integração)', () => {
   let admin: pg.Pool;
   let app: pg.Pool;
   const ctx: Record<string, string> = {};
@@ -37,6 +40,12 @@ describe.skipIf(!enabled)('núcleo institucional (integração)', () => {
   };
 
   beforeAll(async () => {
+    if (!enabled) {
+      throw new Error(
+        'CI_REQUIRE_INTEGRATION=1 exige DATABASE_URL e DATABASE_ADMIN_URL. ' +
+          'Ausência de banco não pode ser tratada como sucesso.',
+      );
+    }
     admin = new pg.Pool({ connectionString: ADMIN_URL });
     app = new pg.Pool({ connectionString: APP_URL });
 
@@ -184,12 +193,16 @@ describe.skipIf(!enabled)('núcleo institucional (integração)', () => {
   });
 
   it('current_version_id deve pertencer ao mesmo documento', async () => {
-    const docs = await asUser(admin, ctx.userA, async (c) => {
-      const d1 = await c.query(`SELECT id FROM sigla_create_document($1,'DOCUMENT_REVIEW'::text,'Doc 1') AS d`, [ctx.procA]).catch(() => null);
-      return d1;
+    await asUser(admin, ctx.userA, async (c) => {
+      const d1 = (await c.query(`SELECT id FROM sigla_create_document($1,'TECHNICAL_OPINION','Doc 1') AS d`, [ctx.procA])).rows[0].id;
+      const d2 = (await c.query(`SELECT id FROM sigla_create_document($1,'TECHNICAL_OPINION','Doc 2') AS d`, [ctx.procA])).rows[0].id;
+      const v1 = (await c.query(
+        `SELECT id FROM sigla_create_document_version($1,'texto',NULL,NULL,NULL,NULL,$2) AS v`,
+        [d1, 'a'.repeat(64)],
+      )).rows[0].id;
+      // Apontar o documento 2 para uma versão do documento 1 deve ser rejeitado.
+      await expect(c.query('UPDATE documents SET current_version_id=$1 WHERE id=$2', [v1, d2])).rejects.toBeDefined();
     });
-    // Se o tipo de documento não existir no seed, o teste apenas não se aplica.
-    if (!docs) return;
   });
 
   it('substituição só concede acesso dentro da vigência', async () => {
